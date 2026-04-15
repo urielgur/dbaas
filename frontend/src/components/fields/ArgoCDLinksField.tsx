@@ -18,11 +18,11 @@ export function ArgoCDLinksField({ value }: FieldRendererProps) {
             href={app.app_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-            title={`ArgoCD: ${app.app_name}`}
+            aria-label={`ArgoCD app ${app.app_name} on ${app.cluster} (opens in new tab)`}
+            className="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-800 hover:underline"
           >
             {app.cluster}
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
           </a>
           <SyncBadge stats={app.sync_stats} syncStatus={app.sync_status} />
         </div>

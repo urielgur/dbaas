@@ -10,6 +10,10 @@ export interface DatabaseFilters {
   db_type?: string;
   namespace?: string;
   q?: string;
+  limit?: number;
+  offset?: number;
+  sort_by?: string;
+  sort_dir?: "asc" | "desc";
 }
 
 export async function listDatabases(filters?: DatabaseFilters): Promise<ListResponse> {

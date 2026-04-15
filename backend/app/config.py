@@ -46,10 +46,22 @@ class StorageSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="STORAGE_")
 
 
+class AuthSettings(BaseSettings):
+    secret_key: str = ""  # AUTH_SECRET_KEY — generate with: openssl rand -hex 32
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    users_json_path: str = "data/users.json"
+    bootstrap_admin_username: str = "admin"
+    bootstrap_admin_password: str = ""  # Set on first deploy to auto-create admin, then clear
+
+    model_config = SettingsConfigDict(env_prefix="AUTH_")
+
+
 class Settings(BaseSettings):
     gitlab: GitLabSettings = GitLabSettings()
     argocd: ArgoCDSettings = ArgoCDSettings()
     storage: StorageSettings = StorageSettings()
+    auth: AuthSettings = AuthSettings()
     scan_interval_seconds: int = 300
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 

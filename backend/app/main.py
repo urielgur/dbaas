@@ -11,12 +11,15 @@ from fastapi.middleware.cors import CORSMiddleware
 # Trigger DB type registration before anything else runs
 import app.registry.types  # noqa: F401
 
-from app.api import databases, scan
+from app.api import auth, databases, scan
+from app.auth.local_provider import hash_password
 from app.collectors.argocd_collector import ArgoCDCollector
 from app.collectors.gitlab_collector import GitLabCollector
 from app.config import settings
 from app.dependencies import get_storage
+from app.models.user import UserRecord
 from app.scanner.scan_orchestrator import ScanOrchestrator, ScanScheduler
+from app.storage.user_storage import UserJsonStorage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +43,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.scheduler = scheduler
 
     await scheduler.start()
+
+    # Bootstrap admin user if no users exist and a password is configured
+    if not settings.auth.secret_key:
+        logger.warning("AUTH_SECRET_KEY is not set — tokens are signed with an empty key (insecure)")
+    user_storage = UserJsonStorage(settings.auth.users_json_path)
+    if await user_storage.count() == 0 and settings.auth.bootstrap_admin_password:
+        admin = UserRecord(
+            username=settings.auth.bootstrap_admin_username,
+            hashed_password=hash_password(settings.auth.bootstrap_admin_password),
+            is_admin=True,
+        )
+        await user_storage.create_user(admin)
+        logger.info("Bootstrap admin user '%s' created", settings.auth.bootstrap_admin_username)
+
     logger.info("DBaaS backend started")
 
     yield
@@ -65,6 +82,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.include_router(auth.router, prefix="/api/v1")
     app.include_router(databases.router, prefix="/api/v1")
     app.include_router(scan.router, prefix="/api/v1")
 

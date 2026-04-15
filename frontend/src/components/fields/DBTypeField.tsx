@@ -14,9 +14,10 @@ export function DBTypeField({ value }: FieldRendererProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${colorClass}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-badge rounded-full text-xs font-semibold ${colorClass}`}
+      aria-label={`Database type: ${dbType}`}
     >
-      <Database className="w-3 h-3" />
+      <Database className="w-3 h-3" aria-hidden="true" />
       {dbType}
     </span>
   );

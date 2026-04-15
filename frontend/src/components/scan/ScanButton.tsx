@@ -10,19 +10,21 @@ export function ScanButton() {
       <button
         onClick={() => trigger()}
         disabled={busy}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+        aria-label={busy ? "Scan in progress" : "Trigger database scan"}
+        aria-busy={busy}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
           ${
             busy
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
+              : "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800"
           }`}
       >
-        <RefreshCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} />
+        <RefreshCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} aria-hidden="true" />
         {isRunning ? "Scanning…" : "Scan Now"}
       </button>
 
       {status && (
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400" aria-live="polite">
           {status.status === "error" && (
             <span className="text-red-500">Error: {status.error_message}</span>
           )}

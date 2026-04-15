@@ -49,7 +49,7 @@ class ScanOrchestrator:
             ScanMetadata(status="running", last_scan_at=datetime.now(timezone.utc))
         )
 
-        start = asyncio.get_event_loop().time()
+        start = asyncio.get_running_loop().time()
         try:
             gitlab_dbs, argocd_app_map = await asyncio.gather(
                 self._gitlab.collect(),
@@ -102,7 +102,7 @@ class ScanOrchestrator:
 
         await self._storage.upsert_many(records)
 
-        duration = asyncio.get_event_loop().time() - start
+        duration = asyncio.get_running_loop().time() - start
         logger.info(
             "Scan complete: %d databases, %d unmatched ArgoCD apps, %.1fs",
             len(records),
@@ -128,6 +128,8 @@ class ScanScheduler:
     - Uses a single asyncio task to avoid overlapping scans.
     - `trigger_now()` is safe to call concurrently; it no-ops if a scan
       is already in progress.
+    - Manual triggers wake the sleeping loop without resetting the periodic
+      schedule — the next auto-scan fires at the originally scheduled time.
     """
 
     def __init__(self, orchestrator: ScanOrchestrator, interval_seconds: int) -> None:
@@ -135,9 +137,10 @@ class ScanScheduler:
         self._interval = interval_seconds
         self._task: asyncio.Task[None] | None = None
         self._running = asyncio.Event()
+        self._trigger = asyncio.Event()
 
     async def start(self) -> None:
-        self._task = asyncio.create_task(self._loop(), name="scan-scheduler")
+        self._task = asyncio.create_task(self._loop(run_immediately=True), name="scan-scheduler")
         logger.info("Scan scheduler started (interval=%ds)", self._interval)
 
     async def stop(self) -> None:
@@ -154,20 +157,26 @@ class ScanScheduler:
         if self._running.is_set():
             logger.debug("Scan already in progress, ignoring trigger_now()")
             return
-        if self._task:
-            self._task.cancel()
-        self._task = asyncio.create_task(self._loop(run_immediately=True), name="scan-scheduler")
+        self._trigger.set()
+
+    async def _sleep_or_trigger(self) -> None:
+        """Sleep for the configured interval, but wake early if trigger_now() fires."""
+        try:
+            await asyncio.wait_for(self._trigger.wait(), timeout=self._interval)
+        except asyncio.TimeoutError:
+            pass
 
     async def _loop(self, run_immediately: bool = False) -> None:
         if not run_immediately:
-            await asyncio.sleep(self._interval)
+            await self._sleep_or_trigger()
 
         while True:
             self._running.set()
+            self._trigger.clear()
             try:
                 await self._orchestrator.run()
             except Exception:
                 logger.exception("Scan raised an unhandled exception")
             finally:
                 self._running.clear()
-            await asyncio.sleep(self._interval)
+            await self._sleep_or_trigger()
