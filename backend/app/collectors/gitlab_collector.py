@@ -1,0 +1,237 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+import yaml
+
+from app.config import GitLabSettings
+from app.registry.db_type_registry import DBTypeRegistry
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SubgroupInfo:
+    id: int
+    full_path: str  # e.g. "dbaas/ops"
+    name: str
+
+
+@dataclass
+class ProjectInfo:
+    id: int
+    name: str
+    web_url: str
+    namespace_full_path: str  # subgroup path, e.g. "dbaas/ops"
+
+
+@dataclass
+class RawGitLabDB:
+    project_id: int
+    project_url: str
+    namespace: str       # e.g. "dbaas/ops"
+    chart_name: str      # Chart.yaml `name`
+    chart_version: str   # Chart.yaml `version`
+    db_type: str         # resolved canonical name from registry
+    db_name: str         # same as chart_name (can be overridden by annotation)
+
+
+class GitLabCollector:
+    """
+    Walks the GitLab subgroup tree under `settings.parent_group_id`,
+    discovers all projects (each = one DB), and reads their Chart.yaml.
+
+    Subgroup traversal: BFS, fully paginated.
+    Chart.yaml fetch: all projects fetched concurrently, bounded by a semaphore.
+
+    Chart.yaml fields used:
+        - `annotations["dbaas/db-type"]`  → db_type  (required; warns if absent)
+        - `name`                           → db_name / chart_name
+        - `version`                        → chart_version
+    """
+
+    def __init__(self, settings: GitLabSettings, http_client: httpx.AsyncClient) -> None:
+        self._settings = settings
+        self._client = http_client
+        self._semaphore = asyncio.Semaphore(settings.request_concurrency)
+        self._base = settings.url.rstrip("/")
+        self._headers = {
+            "PRIVATE-TOKEN": settings.token,
+            "Accept": "application/json",
+        }
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    async def collect(self) -> list[RawGitLabDB]:
+        subgroups = await self._walk_subgroups(self._settings.parent_group_id)
+        logger.info("Found %d subgroups under parent group %d", len(subgroups), self._settings.parent_group_id)
+
+        all_projects: list[ProjectInfo] = []
+        project_tasks = [self._get_projects(sg.id, sg.full_path) for sg in subgroups]
+        project_lists = await asyncio.gather(*project_tasks)
+        for projects in project_lists:
+            all_projects.extend(projects)
+
+        logger.info("Found %d projects total", len(all_projects))
+        return await self._fetch_all_charts(all_projects)
+
+    # ------------------------------------------------------------------
+    # Subgroup traversal (BFS)
+    # ------------------------------------------------------------------
+
+    async def _walk_subgroups(self, root_group_id: int) -> list[SubgroupInfo]:
+        """
+        BFS over the subgroup hierarchy. Returns all subgroups found,
+        including the root's direct children and their descendants.
+        """
+        visited: list[SubgroupInfo] = []
+        queue = [root_group_id]
+
+        while queue:
+            current_ids = queue[:]
+            queue.clear()
+            tasks = [self._get_subgroups(gid) for gid in current_ids]
+            results = await asyncio.gather(*tasks)
+            for subgroup_list in results:
+                for sg in subgroup_list:
+                    visited.append(sg)
+                    queue.append(sg.id)
+
+        return visited
+
+    async def _get_subgroups(self, group_id: int) -> list[SubgroupInfo]:
+        return await self._paginate(
+            f"{self._base}/api/v4/groups/{group_id}/subgroups",
+            params={"per_page": 100},
+            parse=lambda item: SubgroupInfo(
+                id=item["id"],
+                full_path=item["full_path"],
+                name=item["name"],
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # Project listing
+    # ------------------------------------------------------------------
+
+    async def _get_projects(self, group_id: int, namespace_path: str) -> list[ProjectInfo]:
+        return await self._paginate(
+            f"{self._base}/api/v4/groups/{group_id}/projects",
+            params={"per_page": 100, "include_subgroups": "false"},
+            parse=lambda item: ProjectInfo(
+                id=item["id"],
+                name=item["path"],  # use `path` (slug), not display name
+                web_url=item["web_url"],
+                namespace_full_path=namespace_path,
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # Chart.yaml fetching
+    # ------------------------------------------------------------------
+
+    async def _fetch_all_charts(self, projects: list[ProjectInfo]) -> list[RawGitLabDB]:
+        tasks = [self._fetch_chart_yaml(p) for p in projects]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        dbs: list[RawGitLabDB] = []
+        for project, result in zip(projects, results):
+            if isinstance(result, Exception):
+                logger.warning("Failed to fetch Chart.yaml for project %s: %s", project.name, result)
+                continue
+            if result is None:
+                logger.debug("No Chart.yaml found for project %s", project.name)
+                continue
+            dbs.append(result)
+        return dbs
+
+    async def _fetch_chart_yaml(self, project: ProjectInfo) -> RawGitLabDB | None:
+        url = (
+            f"{self._base}/api/v4/projects/{project.id}"
+            f"/repository/files/Chart.yaml/raw?ref=main"
+        )
+        async with self._semaphore:
+            try:
+                resp = await self._client.get(url, headers=self._headers)
+            except httpx.HTTPError as exc:
+                raise RuntimeError(f"HTTP error fetching Chart.yaml: {exc}") from exc
+
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+
+        try:
+            chart = yaml.safe_load(resp.text)
+        except yaml.YAMLError as exc:
+            raise RuntimeError(f"YAML parse error in project {project.name}: {exc}") from exc
+
+        if not isinstance(chart, dict):
+            return None
+
+        return self._parse_chart(chart, project)
+
+    def _parse_chart(self, chart: dict[str, Any], project: ProjectInfo) -> RawGitLabDB | None:
+        chart_name: str = chart.get("name", project.name)
+        chart_version: str = str(chart.get("version", "unknown"))
+
+        annotations: dict[str, str] = chart.get("annotations") or {}
+        raw_type = annotations.get("dbaas/db-type", "")
+
+        if not raw_type:
+            logger.warning(
+                "Project %s has no annotations['dbaas/db-type'] in Chart.yaml — skipping",
+                project.name,
+            )
+            return None
+
+        db_type = DBTypeRegistry.resolve(raw_type)
+        if db_type == "unknown":
+            logger.warning(
+                "Unrecognised db type %r in project %s — registered as 'unknown'",
+                raw_type,
+                project.name,
+            )
+
+        db_name = annotations.get("dbaas/db-name", chart_name)
+
+        return RawGitLabDB(
+            project_id=project.id,
+            project_url=project.web_url,
+            namespace=project.namespace_full_path,
+            chart_name=chart_name,
+            chart_version=chart_version,
+            db_type=db_type,
+            db_name=db_name,
+        )
+
+    # ------------------------------------------------------------------
+    # Pagination helper
+    # ------------------------------------------------------------------
+
+    async def _paginate(
+        self,
+        url: str,
+        params: dict[str, Any],
+        parse: Any,
+    ) -> list[Any]:
+        results: list[Any] = []
+        next_page: str | None = "1"
+
+        while next_page:
+            async with self._semaphore:
+                resp = await self._client.get(
+                    url,
+                    headers=self._headers,
+                    params={**params, "page": next_page},
+                )
+            resp.raise_for_status()
+            for item in resp.json():
+                results.append(parse(item))
+            next_page = resp.headers.get("X-Next-Page") or None
+
+        return results
