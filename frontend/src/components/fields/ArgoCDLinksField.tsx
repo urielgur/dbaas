@@ -2,32 +2,11 @@ import { ExternalLink } from "lucide-react";
 import type { ArgoAppInfo } from "../../types/database";
 import type { FieldRendererProps } from "./types";
 
-const SYNC_STYLES: Record<string, string> = {
-  Synced: "bg-green-100 text-green-700",
-  OutOfSync: "bg-red-100 text-red-700",
-  Unknown: "bg-gray-100 text-gray-500",
-};
-
-const HEALTH_STYLES: Record<string, string> = {
-  Healthy: "bg-green-100 text-green-700",
-  Degraded: "bg-red-100 text-red-700",
-  Progressing: "bg-blue-100 text-blue-700",
-  Missing: "bg-yellow-100 text-yellow-700",
-  Unknown: "bg-gray-100 text-gray-500",
-};
-
-function StatusPill({ label, styles }: { label: string; styles: Record<string, string> }) {
-  const cls = styles[label] ?? "bg-gray-100 text-gray-500";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
-      {label}
-    </span>
-  );
-}
-
 function AppRow({ app }: { app: ArgoAppInfo }) {
+  const { synced, out_of_sync } = app.sync_stats;
+
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2">
       <a
         href={app.app_url}
         target="_blank"
@@ -37,8 +16,14 @@ function AppRow({ app }: { app: ArgoAppInfo }) {
         {app.cluster}
         <ExternalLink className="w-3 h-3" aria-hidden="true" />
       </a>
-      <StatusPill label={app.sync_status} styles={SYNC_STYLES} />
-      <StatusPill label={app.health_status} styles={HEALTH_STYLES} />
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+        {synced} synced
+      </span>
+      {out_of_sync > 0 && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+          {out_of_sync} out of sync
+        </span>
+      )}
     </div>
   );
 }
