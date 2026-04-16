@@ -56,7 +56,6 @@ class ScanOrchestrator:
                 self._argocd.collect(),
             )
         except Exception as exc:
-            logger.exception("Scan failed during collection phase")
             await self._storage.set_scan_metadata(
                 ScanMetadata(
                     status="error",

@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load .env into os.environ before any Settings class is instantiated.
+# This makes variables available to all nested BaseSettings subclasses.
+for _env_path in (Path(".env"), Path("../.env")):
+    if _env_path.exists():
+        load_dotenv(_env_path)
+        break
 
 
 class GitLabSettings(BaseSettings):
@@ -73,7 +82,6 @@ class Settings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
         env_nested_delimiter="__",
         extra="ignore",
     )
