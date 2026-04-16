@@ -36,12 +36,13 @@ class ProjectInfo:
 class RawGitLabDB:
     project_id: int
     project_url: str
-    namespace: str         # e.g. "dbaas/ops"
-    project_slug: str      # GitLab project path slug, e.g. "users-db"
+    namespace: str         # e.g. "dbaas/data"
+    group: str             # last segment of namespace, e.g. "data"
+    project_slug: str      # GitLab project path slug, e.g. "analytics-pg"
     chart_name: str        # Chart.yaml `name`
     chart_version: str     # dependencies[0].version
     db_type: str           # resolved canonical name from registry
-    db_name: str           # chart_name, or dbaas/db-name annotation override
+    db_name: str           # project slug by default, or dbaas/db-name annotation override
 
 
 class GitLabCollector:
@@ -225,12 +226,15 @@ class GitLabCollector:
             )
 
         annotations: dict[str, str] = chart.get("annotations") or {}
-        db_name = annotations.get("dbaas/db-name", chart_name)
+        # db_name defaults to the GitLab project slug; annotation can override it
+        db_name = annotations.get("dbaas/db-name", project.name)
+        group = project.namespace_full_path.rstrip("/").split("/")[-1]
 
         return RawGitLabDB(
             project_id=project.id,
             project_url=project.web_url,
             namespace=project.namespace_full_path,
+            group=group,
             project_slug=project.name,
             chart_name=chart_name,
             chart_version=chart_version,

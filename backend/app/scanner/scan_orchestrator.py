@@ -93,6 +93,7 @@ class ScanOrchestrator:
                         "_id": f"gitlab-project-{db.project_id}",
                         "db_type": db.db_type,
                         "db_name": db.db_name,
+                        "group": db.group,
                         "gitlab_project_id": db.project_id,
                         "gitlab_project_url": db.project_url,
                         "gitlab_namespace": db.namespace,

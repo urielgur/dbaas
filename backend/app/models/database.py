@@ -37,9 +37,10 @@ class DatabaseRecord(BaseModel):
     id: str = Field(alias="_id")
     db_type: str
     db_name: str
+    group: str  # last segment of the GitLab namespace, e.g. "data"
     gitlab_project_id: int
     gitlab_project_url: str
-    gitlab_namespace: str  # e.g. "dbaas/ops"
+    gitlab_namespace: str  # full namespace path, e.g. "dbaas/data"
     chart_version: str
     chart_name: str
     argocd_apps: list[ArgoAppInfo] = []

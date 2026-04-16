@@ -37,8 +37,8 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     sortable: true,
   },
   {
-    key: "gitlab_namespace",
-    label: "Namespace",
+    key: "group",
+    label: "Group",
     renderer: "text",
     sortable: true,
     filterable: true,

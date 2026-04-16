@@ -26,7 +26,7 @@ async def test_upsert_and_get_all(
     await tmp_storage.upsert_many([sample_record])
     records = await tmp_storage.get_all()
     assert len(records) == 1
-    assert records[0].db_name == "ops-users-db"
+    assert records[0].db_name == "users-db"
 
 
 async def test_upsert_is_idempotent(

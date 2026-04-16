@@ -18,6 +18,7 @@ export interface DatabaseRecord {
   id: string;
   db_type: string;
   db_name: string;
+  group: string;
   gitlab_project_id: number;
   gitlab_project_url: string;
   gitlab_namespace: string;

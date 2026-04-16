@@ -12,7 +12,8 @@ def sample_record() -> DatabaseRecord:
         **{
             "_id": "gitlab-project-1",
             "db_type": "postgresql",
-            "db_name": "ops-users-db",
+            "db_name": "users-db",
+            "group": "ops",
             "gitlab_project_id": 1,
             "gitlab_project_url": "https://gitlab.example.com/dbaas/ops/users-db",
             "gitlab_namespace": "dbaas/ops",
