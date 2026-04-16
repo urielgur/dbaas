@@ -75,6 +75,7 @@ async def test_collect_happy_path() -> None:
 
     assert len(dbs) == 1
     assert dbs[0].db_name == "users-db"
+    assert dbs[0].project_slug == "users-db"
     assert dbs[0].db_type == "postgresql"
     assert dbs[0].chart_version == "14.0.0"
     assert dbs[0].namespace == "dbaas/ops"

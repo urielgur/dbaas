@@ -36,11 +36,12 @@ class ProjectInfo:
 class RawGitLabDB:
     project_id: int
     project_url: str
-    namespace: str       # e.g. "dbaas/ops"
-    chart_name: str      # Chart.yaml `name`
-    chart_version: str   # Chart.yaml `version`
-    db_type: str         # resolved canonical name from registry
-    db_name: str         # same as chart_name (can be overridden by annotation)
+    namespace: str         # e.g. "dbaas/ops"
+    project_slug: str      # GitLab project path slug, e.g. "users-db"
+    chart_name: str        # Chart.yaml `name`
+    chart_version: str     # dependencies[0].version
+    db_type: str           # resolved canonical name from registry
+    db_name: str           # chart_name, or dbaas/db-name annotation override
 
 
 class GitLabCollector:
@@ -230,6 +231,7 @@ class GitLabCollector:
             project_id=project.id,
             project_url=project.web_url,
             namespace=project.namespace_full_path,
+            project_slug=project.name,
             chart_name=chart_name,
             chart_version=chart_version,
             db_type=db_type,

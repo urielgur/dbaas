@@ -70,10 +70,23 @@ class ScanOrchestrator:
         records: list[DatabaseRecord] = []
 
         for db in gitlab_dbs:
-            app_key = ArgoCDCollector.build_app_key(db.namespace, db.db_name)
-            argocd_apps = argocd_app_map.get(app_key, [])
+            # Try db_name first (may be overridden via annotation), then fall back
+            # to the raw GitLab project slug in case the chart name differs.
+            key_by_name = ArgoCDCollector.build_app_key(db.namespace, db.db_name)
+            key_by_slug = ArgoCDCollector.build_app_key(db.namespace, db.project_slug)
+
+            argocd_apps = argocd_app_map.get(key_by_name) or argocd_app_map.get(key_by_slug, [])
+            matched_key = key_by_name if argocd_app_map.get(key_by_name) else key_by_slug
+
             if argocd_apps:
-                matched_keys.add(app_key)
+                matched_keys.add(matched_key)
+            else:
+                logger.debug(
+                    "No ArgoCD match for GitLab project '%s' (tried keys: '%s', '%s')",
+                    db.project_slug,
+                    key_by_name,
+                    key_by_slug,
+                )
 
             records.append(
                 DatabaseRecord(
@@ -93,10 +106,12 @@ class ScanOrchestrator:
 
         unmatched = [key for key in argocd_app_map if key not in matched_keys]
         if unmatched:
+            sample = unmatched[:10]
             logger.warning(
-                "%d ArgoCD app(s) had no matching GitLab project: %s",
+                "%d ArgoCD app(s) had no matching GitLab project (showing up to 10): %s%s",
                 len(unmatched),
-                unmatched,
+                sample,
+                " …" if len(unmatched) > 10 else "",
             )
 
         await self._storage.upsert_many(records)
