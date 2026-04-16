@@ -1,10 +1,11 @@
 # Environment
 .env
 .env.local
-.venv/
 
+# Project-specific
 CLAUDE.md
 docker-compose.yml
+
 
 # Python
 __pycache__/
