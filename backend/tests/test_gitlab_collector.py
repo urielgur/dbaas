@@ -21,11 +21,13 @@ def make_settings() -> GitLabSettings:
 CHART_YAML_POSTGRESQL = """\
 name: users-db
 version: 1.0.0
-annotations:
-  dbaas/db-type: postgresql
+dependencies:
+  - name: postgresql
+    version: "14.0.0"
+    repository: "oci://registry.example.com/charts"
 """
 
-CHART_YAML_NO_ANNOTATION = """\
+CHART_YAML_NO_DEPS = """\
 name: mystery-db
 version: 2.0.0
 """

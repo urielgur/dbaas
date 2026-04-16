@@ -204,12 +204,12 @@ class GitLabCollector:
         chart_name: str = chart.get("name", project.name)
         chart_version: str = str(chart.get("version", "unknown"))
 
-        annotations: dict[str, str] = chart.get("annotations") or {}
-        raw_type = annotations.get("dbaas/db-type", "")
+        dependencies: list[dict] = chart.get("dependencies") or []
+        raw_type = dependencies[0].get("name", "") if dependencies else ""
 
         if not raw_type:
             logger.warning(
-                "Project %s has no annotations['dbaas/db-type'] in Chart.yaml — skipping",
+                "Project %s has no dependencies[0].name in Chart.yaml — skipping",
                 project.name,
             )
             return None
@@ -222,6 +222,7 @@ class GitLabCollector:
                 project.name,
             )
 
+        annotations: dict[str, str] = chart.get("annotations") or {}
         db_name = annotations.get("dbaas/db-name", chart_name)
 
         return RawGitLabDB(
