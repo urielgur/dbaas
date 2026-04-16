@@ -9,21 +9,19 @@ import { useDbTypes } from "./hooks/useDbTypes";
 import { useDatabases } from "./hooks/useDatabases";
 import { useUrlFilters } from "./hooks/useUrlFilters";
 
-const PAGE_SIZE = 25;
-
 const INPUT_CLS =
   "w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm " +
   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white";
 
 export default function App() {
   const { filters, setFilters } = useUrlFilters();
-  const { q, db_type, page, sort_by, sort_dir } = filters;
+  const { q, db_type, page, page_size, sort_by, sort_dir } = filters;
 
   const { data, isLoading, isError, refetch } = useDatabases({
     q: q || undefined,
     db_type: db_type || undefined,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    limit: page_size,
+    offset: (page - 1) * page_size,
     sort_by: sort_by || undefined,
     sort_dir: sort_dir,
   });
@@ -123,9 +121,10 @@ export default function App() {
             />
             <Pagination
               page={page}
-              pageSize={PAGE_SIZE}
+              pageSize={page_size}
               total={data.total}
               onPageChange={(p) => setFilters({ page: p })}
+              onPageSizeChange={(size) => setFilters({ page_size: size, page: 1 })}
             />
           </ErrorBoundary>
         )}

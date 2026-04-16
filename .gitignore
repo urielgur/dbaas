@@ -1,5 +1,6 @@
 # Environment
 .env
+.env.example
 .env.local
 
 # Project-specific
@@ -31,3 +32,6 @@ frontend/dist/
 .idea/
 .vscode/
 *.iml
+.env.example
+.env.example
+.env.example
