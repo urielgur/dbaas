@@ -16,12 +16,14 @@ function AppRow({ app }: { app: ArgoAppInfo }) {
         {app.cluster}
         <ExternalLink className="w-3 h-3" aria-hidden="true" />
       </a>
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
-        {synced} synced
-      </span>
+      {synced > 0 && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+          {synced}
+        </span>
+      )}
       {out_of_sync > 0 && (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-          {out_of_sync} out of sync
+          {out_of_sync}
         </span>
       )}
     </div>
