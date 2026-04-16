@@ -56,6 +56,7 @@ async def test_collect_happy_path() -> None:
                     "id": 100,
                     "path": "users-db",
                     "web_url": "https://gitlab.example.com/dbaas/ops/users-db",
+                    "default_branch": "main",
                 }
             ],
             headers={"X-Next-Page": ""},

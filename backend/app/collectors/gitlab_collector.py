@@ -29,6 +29,7 @@ class ProjectInfo:
     name: str
     web_url: str
     namespace_full_path: str  # subgroup path, e.g. "dbaas/ops"
+    default_branch: str = "main"
 
 
 @dataclass
@@ -152,6 +153,7 @@ class GitLabCollector:
                 name=item["path"],  # use `path` (slug), not display name
                 web_url=item["web_url"],
                 namespace_full_path=namespace_path,
+                default_branch=item.get("default_branch") or "main",
             ),
         )
 
@@ -176,7 +178,7 @@ class GitLabCollector:
     async def _fetch_chart_yaml(self, project: ProjectInfo) -> RawGitLabDB | None:
         url = (
             f"{self._base}/api/v4/projects/{project.id}"
-            f"/repository/files/Chart.yaml/raw?ref=main"
+            f"/repository/files/Chart.yaml/raw?ref={project.default_branch}"
         )
         async with self._semaphore:
             try:
