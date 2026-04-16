@@ -55,11 +55,6 @@ async def test_collect_parses_apps() -> None:
     assert apps[0].app_url == "https://argocd1.example.com/applications/ops-users-db"
 
 
-def test_build_app_key() -> None:
-    assert ArgoCDCollector.build_app_key("dbaas/ops", "users-db") == "ops-users-db"
-    assert ArgoCDCollector.build_app_key("dbaas/data", "logs-prod") == "data-logs-prod"
-
-
 @respx.mock
 async def test_collect_handles_instance_error() -> None:
     respx.get("https://argocd1.example.com/api/v1/applications").mock(

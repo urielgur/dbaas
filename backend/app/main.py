@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     storage = get_storage()
     gitlab_collector = GitLabCollector(settings.gitlab, http_client)
     argocd_collector = ArgoCDCollector(settings.argocd.instances, http_client)
-    orchestrator = ScanOrchestrator(gitlab_collector, argocd_collector, storage)
+    orchestrator = ScanOrchestrator(gitlab_collector, argocd_collector, storage, settings.argocd.app_name_prefix)
     scheduler = ScanScheduler(orchestrator, settings.scan_interval_seconds)
 
     app.state.orchestrator = orchestrator

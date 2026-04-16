@@ -150,17 +150,3 @@ class ArgoCDCollector:
                 unknown += 1
         return SyncStats(synced=synced, out_of_sync=out_of_sync, unknown=unknown)
 
-    # ------------------------------------------------------------------
-    # Key construction (called by orchestrator)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def build_app_key(namespace: str, db_name: str) -> str:
-        """
-        Derive the expected ArgoCD app name from GitLab data.
-
-        Convention: "{last_namespace_segment}-{db_name}"
-        e.g. namespace="dbaas/ops", db_name="logs-prod" → "ops-logs-prod"
-        """
-        subgroup = namespace.rstrip("/").split("/")[-1]
-        return f"{subgroup}-{db_name}"

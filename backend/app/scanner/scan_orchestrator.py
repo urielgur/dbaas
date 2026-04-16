@@ -28,8 +28,9 @@ class ScanOrchestrator:
     Merge logic:
         1. Run both collectors concurrently via asyncio.gather.
         2. Build a lookup dict: argocd_app_key → [ArgoAppInfo] from ArgoCD results.
-        3. For each RawGitLabDB, derive the expected app key
-           (via ArgoCDCollector.build_app_key) and attach matching apps.
+        3. For each RawGitLabDB, derive the expected ArgoCD app name as
+           "{argocd_app_prefix}-{project_slug}" (e.g. "dbaas-analytics-pg") and
+           look it up in the map.
         4. Any ArgoCD apps with no matching GitLab project are logged as
            unmatched (stored in ScanMetadata for operator visibility).
     """
@@ -39,10 +40,12 @@ class ScanOrchestrator:
         gitlab_collector: GitLabCollector,
         argocd_collector: ArgoCDCollector,
         storage: StorageBackend,
+        argocd_app_prefix: str = "dbaas",
     ) -> None:
         self._gitlab = gitlab_collector
         self._argocd = argocd_collector
         self._storage = storage
+        self._argocd_app_prefix = argocd_app_prefix
 
     async def run(self) -> ScanResult:
         await self._storage.set_scan_metadata(
@@ -70,22 +73,18 @@ class ScanOrchestrator:
         records: list[DatabaseRecord] = []
 
         for db in gitlab_dbs:
-            # Try db_name first (may be overridden via annotation), then fall back
-            # to the raw GitLab project slug in case the chart name differs.
-            key_by_name = ArgoCDCollector.build_app_key(db.namespace, db.db_name)
-            key_by_slug = ArgoCDCollector.build_app_key(db.namespace, db.project_slug)
-
-            argocd_apps = argocd_app_map.get(key_by_name) or argocd_app_map.get(key_by_slug, [])
-            matched_key = key_by_name if argocd_app_map.get(key_by_name) else key_by_slug
+            # ArgoCD app name convention: "{ARGOCD_APP_NAME_PREFIX}-{project_slug}"
+            # e.g. prefix="dbaas", project_slug="analytics-pg" → "dbaas-analytics-pg"
+            app_key = f"{self._argocd_app_prefix}-{db.project_slug}" if self._argocd_app_prefix else db.project_slug
+            argocd_apps = argocd_app_map.get(app_key, [])
 
             if argocd_apps:
-                matched_keys.add(matched_key)
+                matched_keys.add(app_key)
             else:
                 logger.debug(
-                    "No ArgoCD match for GitLab project '%s' (tried keys: '%s', '%s')",
+                    "No ArgoCD match for GitLab project '%s' (tried key: '%s')",
                     db.project_slug,
-                    key_by_name,
-                    key_by_slug,
+                    app_key,
                 )
 
             records.append(

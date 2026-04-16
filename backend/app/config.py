@@ -33,8 +33,9 @@ class ArgoCDInstanceConfig(BaseModel):
 
 class ArgoCDSettings(BaseSettings):
     instances: list[ArgoCDInstanceConfig] = []
-    # If app names follow a different convention, override via ARGOCD_APP_NAME_SUFFIX_SEPARATOR
-    app_name_separator: str = "-"
+    # Prefix used in ArgoCD app names: "{app_name_prefix}-{project_slug}"
+    # e.g. prefix="dbaas", project="analytics-pg" → app name "dbaas-analytics-pg"
+    app_name_prefix: str = "dbaas"
 
     @field_validator("instances", mode="before")
     @classmethod
