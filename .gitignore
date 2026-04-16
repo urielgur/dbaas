@@ -1,6 +1,10 @@
 # Environment
 .env
 .env.local
+.venv/
+
+CLAUDE.md
+docker-compose.yml
 
 # Python
 __pycache__/
