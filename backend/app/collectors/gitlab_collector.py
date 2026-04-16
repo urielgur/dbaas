@@ -202,10 +202,11 @@ class GitLabCollector:
 
     def _parse_chart(self, chart: dict[str, Any], project: ProjectInfo) -> RawGitLabDB | None:
         chart_name: str = chart.get("name", project.name)
-        chart_version: str = str(chart.get("version", "unknown"))
 
         dependencies: list[dict] = chart.get("dependencies") or []
-        raw_type = dependencies[0].get("name", "") if dependencies else ""
+        first_dep = dependencies[0] if dependencies else {}
+        raw_type = first_dep.get("name", "")
+        chart_version: str = str(first_dep.get("version", "unknown"))
 
         if not raw_type:
             logger.warning(

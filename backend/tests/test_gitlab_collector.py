@@ -26,6 +26,7 @@ dependencies:
     version: "14.0.0"
     repository: "oci://registry.example.com/charts"
 """
+# chart_version should be read from dependencies[0].version → "14.0.0"
 
 CHART_YAML_NO_DEPS = """\
 name: mystery-db
@@ -75,7 +76,7 @@ async def test_collect_happy_path() -> None:
     assert len(dbs) == 1
     assert dbs[0].db_name == "users-db"
     assert dbs[0].db_type == "postgresql"
-    assert dbs[0].chart_version == "1.0.0"
+    assert dbs[0].chart_version == "14.0.0"
     assert dbs[0].namespace == "dbaas/ops"
 
 
