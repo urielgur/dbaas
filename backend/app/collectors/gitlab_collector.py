@@ -5,6 +5,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+import urllib.parse
+
 import httpx
 import yaml
 
@@ -42,11 +44,11 @@ class RawGitLabDB:
 
 class GitLabCollector:
     """
-    Walks the GitLab subgroup tree under `settings.parent_group_id`,
+    Walks the GitLab subgroup tree under `settings.parent_group_path`,
     discovers all projects (each = one DB), and reads their Chart.yaml.
 
-    Subgroup traversal: BFS, fully paginated.
-    Chart.yaml fetch: all projects fetched concurrently, bounded by a semaphore.
+    Subgroup traversal: BFS, fully paginated. Supports arbitrary nesting depth —
+    department subgroups, team sub-subgroups, etc. are all discovered automatically.
 
     Chart.yaml fields used:
         - `annotations["dbaas/db-type"]`  → db_type  (required; warns if absent)
@@ -69,8 +71,9 @@ class GitLabCollector:
     # ------------------------------------------------------------------
 
     async def collect(self) -> list[RawGitLabDB]:
-        subgroups = await self._walk_subgroups(self._settings.parent_group_id)
-        logger.info("Found %d subgroups under parent group %d", len(subgroups), self._settings.parent_group_id)
+        root_id = await self._resolve_group_path(self._settings.parent_group_path)
+        subgroups = await self._walk_subgroups(root_id)
+        logger.info("Found %d subgroups under '%s'", len(subgroups), self._settings.parent_group_path)
 
         all_projects: list[ProjectInfo] = []
         project_tasks = [self._get_projects(sg.id, sg.full_path) for sg in subgroups]
@@ -80,6 +83,26 @@ class GitLabCollector:
 
         logger.info("Found %d projects total", len(all_projects))
         return await self._fetch_all_charts(all_projects)
+
+    # ------------------------------------------------------------------
+    # Path resolver
+    # ------------------------------------------------------------------
+
+    async def _resolve_group_path(self, path: str) -> int:
+        """
+        Resolve a group path (e.g. "ugurfinkel-group/dbaas") to its numeric ID.
+
+        The GitLab API accepts URL-encoded paths wherever it expects a group ID,
+        so "ugurfinkel-group/dbaas" becomes "ugurfinkel-group%2Fdbaas".
+        """
+        encoded = urllib.parse.quote(path, safe="")
+        url = f"{self._base}/api/v4/groups/{encoded}"
+        async with self._semaphore:
+            resp = await self._client.get(url, headers=self._headers)
+        if resp.status_code == 404:
+            raise ValueError(f"GitLab group not found: '{path}'")
+        resp.raise_for_status()
+        return int(resp.json()["id"])
 
     # ------------------------------------------------------------------
     # Subgroup traversal (BFS)

@@ -19,7 +19,7 @@ for _env_path in (Path(".env"), Path("../.env")):
 class GitLabSettings(BaseSettings):
     url: str = "https://gitlab.example.com"
     token: str = ""
-    parent_group_id: int = 0
+    parent_group_path: str = ""  # e.g. "ugurfinkel-group/dbaas"
     request_concurrency: int = 20
 
     model_config = SettingsConfigDict(env_prefix="GITLAB_")

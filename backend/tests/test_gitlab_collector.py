@@ -13,7 +13,7 @@ def make_settings() -> GitLabSettings:
     return GitLabSettings(
         url="https://gitlab.example.com",
         token="test-token",
-        parent_group_id=10,
+        parent_group_path="dbaas/ops",
         request_concurrency=5,
     )
 
@@ -33,6 +33,10 @@ version: 2.0.0
 
 @respx.mock
 async def test_collect_happy_path() -> None:
+    # Path resolution: dbaas/ops → id 10
+    respx.get("https://gitlab.example.com/api/v4/groups/dbaas%2Fops").mock(
+        return_value=httpx.Response(200, json={"id": 10, "full_path": "dbaas/ops"})
+    )
     respx.get("https://gitlab.example.com/api/v4/groups/10/subgroups").mock(
         return_value=httpx.Response(
             200,
@@ -74,6 +78,9 @@ async def test_collect_happy_path() -> None:
 
 @respx.mock
 async def test_collect_skips_missing_annotation() -> None:
+    respx.get("https://gitlab.example.com/api/v4/groups/dbaas%2Fops").mock(
+        return_value=httpx.Response(200, json={"id": 10, "full_path": "dbaas/ops"})
+    )
     respx.get("https://gitlab.example.com/api/v4/groups/10/subgroups").mock(
         return_value=httpx.Response(200, json=[], headers={"X-Next-Page": ""})
     )
