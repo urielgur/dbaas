@@ -29,8 +29,9 @@ async def list_databases(
     storage: Annotated[StorageBackend, Depends(get_storage)],
     db_type: str | None = Query(default=None, description="Filter by DB type"),
     namespace: str | None = Query(default=None, description="Filter by GitLab namespace"),
+    group: str | None = Query(default=None, description="Filter by group"),
     q: str | None = Query(default=None, description="Substring search on db_name"),
-    limit: int = Query(default=50, ge=1, le=200, description="Page size"),
+    limit: int = Query(default=50, ge=1, le=1000, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Page offset"),
     sort_by: str | None = Query(default=None, description="Field to sort by"),
     sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction"),
@@ -42,6 +43,8 @@ async def list_databases(
         records = [r for r in records if r.db_type == db_type]
     if namespace:
         records = [r for r in records if r.gitlab_namespace == namespace]
+    if group:
+        records = [r for r in records if r.group == group]
     if q:
         q_lower = q.lower()
         records = [r for r in records if q_lower in r.db_name.lower()]
@@ -61,6 +64,15 @@ async def list_databases(
         total=total,
         last_scanned_at=meta.last_scan_at,
     )
+
+
+@router.get("/groups")
+async def list_groups(
+    _: Annotated[UserRecord, Depends(get_current_user)],
+    storage: Annotated[StorageBackend, Depends(get_storage)],
+) -> list[str]:
+    records = await storage.get_all()
+    return sorted({r.group for r in records if r.group})
 
 
 @router.get("/types")

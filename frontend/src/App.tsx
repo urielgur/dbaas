@@ -6,6 +6,7 @@ import { DatabaseTable } from "./components/databases/DatabaseTable";
 import { Header } from "./components/layout/Header";
 import { ScanButton } from "./components/scan/ScanButton";
 import { useDbTypes } from "./hooks/useDbTypes";
+import { useGroups } from "./hooks/useGroups";
 import { useDatabases } from "./hooks/useDatabases";
 import { useUrlFilters } from "./hooks/useUrlFilters";
 
@@ -15,11 +16,12 @@ const INPUT_CLS =
 
 export default function App() {
   const { filters, setFilters } = useUrlFilters();
-  const { q, db_type, page, page_size, sort_by, sort_dir } = filters;
+  const { q, db_type, group, page, page_size, sort_by, sort_dir } = filters;
 
   const { data, isLoading, isError, refetch } = useDatabases({
     q: q || undefined,
     db_type: db_type || undefined,
+    group: group || undefined,
     limit: page_size,
     offset: (page - 1) * page_size,
     sort_by: sort_by || undefined,
@@ -27,8 +29,9 @@ export default function App() {
   });
 
   const { data: dbTypes } = useDbTypes();
+  const { data: groups } = useGroups();
 
-  const hasFilters = !!(q || db_type);
+  const hasFilters = !!(q || db_type || group);
 
   function handleSearch(val: string) {
     setFilters({ q: val, page: 1 });
@@ -36,6 +39,10 @@ export default function App() {
 
   function handleTypeChange(val: string) {
     setFilters({ db_type: val, page: 1 });
+  }
+
+  function handleGroupChange(val: string) {
+    setFilters({ group: val, page: 1 });
   }
 
   function handleSort(key: string, dir: "asc" | "desc") {
@@ -49,27 +56,12 @@ export default function App() {
 
       <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-6">
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-6">
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            {/* Search */}
+            {/* Type filter — matches "Type" column (1st) */}
             <div className="flex-1 sm:max-w-xs">
-              <label htmlFor="search-input" className="sr-only">
-                Search databases by name
-              </label>
-              <input
-                id="search-input"
-                type="search"
-                placeholder="Search by name…"
-                value={q}
-                onChange={(e) => handleSearch(e.target.value)}
-                className={INPUT_CLS}
-              />
-            </div>
-
-            {/* Type filter */}
-            <div className="flex-1 sm:max-w-xs">
-              <label htmlFor="type-filter" className="sr-only">
-                Filter by database type
+              <label htmlFor="type-filter" className="block text-xs font-medium text-gray-500 mb-1">
+                Type
               </label>
               <select
                 id="type-filter"
@@ -82,6 +74,39 @@ export default function App() {
                   <option key={t.canonical_name} value={t.canonical_name}>
                     {t.display_label}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Name search — matches "Name" column (2nd) */}
+            <div className="flex-1 sm:max-w-xs">
+              <label htmlFor="search-input" className="block text-xs font-medium text-gray-500 mb-1">
+                Name
+              </label>
+              <input
+                id="search-input"
+                type="search"
+                placeholder="Search…"
+                value={q}
+                onChange={(e) => handleSearch(e.target.value)}
+                className={INPUT_CLS}
+              />
+            </div>
+
+            {/* Group filter — matches "Group" column (3rd) */}
+            <div className="flex-1 sm:max-w-xs">
+              <label htmlFor="group-filter" className="block text-xs font-medium text-gray-500 mb-1">
+                Group
+              </label>
+              <select
+                id="group-filter"
+                value={group}
+                onChange={(e) => handleGroupChange(e.target.value)}
+                className={INPUT_CLS}
+              >
+                <option value="">All groups</option>
+                {groups?.map((g) => (
+                  <option key={g} value={g}>{g}</option>
                 ))}
               </select>
             </div>

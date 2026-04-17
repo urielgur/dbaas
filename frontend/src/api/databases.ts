@@ -9,6 +9,7 @@ import type {
 export interface DatabaseFilters {
   db_type?: string;
   namespace?: string;
+  group?: string;
   q?: string;
   limit?: number;
   offset?: number;
@@ -28,6 +29,11 @@ export async function getDatabase(id: string): Promise<DatabaseRecord> {
 
 export async function listDbTypes(): Promise<DBTypeDescriptor[]> {
   const { data } = await apiClient.get<DBTypeDescriptor[]>("/databases/types");
+  return data;
+}
+
+export async function listGroups(): Promise<string[]> {
+  const { data } = await apiClient.get<string[]>("/databases/groups");
   return data;
 }
 

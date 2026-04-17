@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 1000] as const;
 const DEFAULT_PAGE_SIZE = 25;
 
 export { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE };
@@ -8,6 +8,7 @@ export { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE };
 export interface UrlFilters {
   q: string;
   db_type: string;
+  group: string;
   page: number;
   page_size: number;
   sort_by: string;
@@ -23,6 +24,7 @@ function readFromUrl(): UrlFilters {
   return {
     q: p.get("q") ?? "",
     db_type: p.get("db_type") ?? "",
+    group: p.get("group") ?? "",
     page: Math.max(1, parseInt(p.get("page") ?? "1", 10)),
     page_size,
     sort_by: p.get("sort_by") ?? "",
@@ -34,6 +36,7 @@ function writeToUrl(filters: UrlFilters) {
   const p = new URLSearchParams();
   if (filters.q) p.set("q", filters.q);
   if (filters.db_type) p.set("db_type", filters.db_type);
+  if (filters.group) p.set("group", filters.group);
   if (filters.page > 1) p.set("page", String(filters.page));
   if (filters.page_size !== DEFAULT_PAGE_SIZE) p.set("page_size", String(filters.page_size));
   if (filters.sort_by) p.set("sort_by", filters.sort_by);

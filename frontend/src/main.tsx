@@ -23,7 +23,7 @@ createRoot(document.getElementById("root")!).render(
         <ErrorBoundary>
           <App />
         </ErrorBoundary>
-        <Toaster position="bottom-right" richColors />
+        <Toaster position="bottom-right" richColors closeButton />
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
