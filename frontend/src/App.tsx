@@ -3,6 +3,7 @@ import { Pagination } from "./components/Pagination";
 import { TableSkeleton } from "./components/TableSkeleton";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { DatabaseTable } from "./components/databases/DatabaseTable";
+import { ParentChartsSection } from "./components/databases/ParentChartsSection";
 import { Header } from "./components/layout/Header";
 import { ScanButton } from "./components/scan/ScanButton";
 import { useDbTypes } from "./hooks/useDbTypes";
@@ -55,6 +56,8 @@ export default function App() {
       <Header />
 
       <main className="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-6">
+        <ParentChartsSection />
+
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-6">
           <div className="flex flex-col sm:flex-row gap-3 flex-1">

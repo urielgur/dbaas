@@ -34,6 +34,8 @@ export interface DBTypeDescriptor {
   display_label: string;
   icon_name: string;
   console_url_template: string;
+  helm_chart_url: string;
+  helm_chart_version: string;
 }
 
 export type ScanStatus = "ok" | "running" | "error" | "never";

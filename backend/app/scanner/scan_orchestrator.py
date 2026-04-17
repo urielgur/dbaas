@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from app.collectors.argocd_collector import ArgoCDCollector
 from app.collectors.gitlab_collector import GitLabCollector
 from app.models.database import DatabaseRecord
+from app.registry.db_type_registry import DBTypeRegistry
 from app.storage.base import ScanMetadata, StorageBackend
 
 logger = logging.getLogger(__name__)
@@ -115,6 +116,7 @@ class ScanOrchestrator:
             )
 
         await self._storage.upsert_many(records)
+        await self._refresh_parent_chart_versions()
 
         duration = asyncio.get_running_loop().time() - start
         logger.info(
@@ -133,6 +135,31 @@ class ScanOrchestrator:
             duration_seconds=duration,
             unmatched_argocd_apps=unmatched,
         )
+
+
+    async def _refresh_parent_chart_versions(self) -> None:
+        """Fetch the current version of each registered parent helm chart from GitLab."""
+        descriptors = [d for d in DBTypeRegistry.all_types() if d.helm_chart_url]
+        if not descriptors:
+            return
+
+        tasks = [self._gitlab.fetch_chart_version_from_url(d.helm_chart_url) for d in descriptors]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for descriptor, result in zip(descriptors, results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Failed to fetch parent chart version for %s: %s",
+                    descriptor.canonical_name,
+                    result,
+                )
+            elif result:
+                descriptor.helm_chart_version = result
+                logger.info(
+                    "Parent chart version for %s: %s",
+                    descriptor.canonical_name,
+                    result,
+                )
 
 
 class ScanScheduler:

@@ -6,5 +6,6 @@ register_db_type(
         aliases=["elasticsearch", "elastic", "es", "opensearch"],
         display_label="Elasticsearch",
         icon_name="elasticsearch",
+        helm_chart_url="https://gitlab.example.com/PLACEHOLDER/elasticsearch-helm-chart",
     )
 )

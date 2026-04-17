@@ -86,6 +86,8 @@ async def list_db_types(
             "display_label": d.display_label,
             "icon_name": d.icon_name,
             "console_url_template": settings.console.get_template(d.canonical_name),
+            "helm_chart_url": d.helm_chart_url,
+            "helm_chart_version": d.helm_chart_version,
         }
         for d in DBTypeRegistry.all_types()
     ]

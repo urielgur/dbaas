@@ -9,6 +9,8 @@ class DBTypeDescriptor:
     aliases: list[str]   # e.g. ["elastic", "es", "elasticsearch"]
     display_label: str   # e.g. "Elasticsearch"
     icon_name: str       # maps to a frontend icon key
+    helm_chart_url: str = ""      # GitLab URL to the parent helm chart repo
+    helm_chart_version: str = ""  # Current version of the parent helm chart
 
 
 class DBTypeRegistry:

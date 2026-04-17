@@ -6,5 +6,6 @@ register_db_type(
         aliases=["mongodb", "mongo"],
         display_label="MongoDB",
         icon_name="mongodb",
+        helm_chart_url="https://gitlab.example.com/PLACEHOLDER/mongodb-helm-chart",
     )
 )

@@ -243,6 +243,60 @@ class GitLabCollector:
         )
 
     # ------------------------------------------------------------------
+    # Parent chart version fetching
+    # ------------------------------------------------------------------
+
+    async def fetch_chart_version_from_url(self, project_url: str) -> str | None:
+        """
+        Given a GitLab project web URL (e.g. https://gitlab.example.com/group/my-chart),
+        fetch its Chart.yaml and return the `version` field, or None on any failure.
+        """
+        if not project_url.startswith(self._base):
+            logger.warning(
+                "helm_chart_url %r does not match GitLab base %r — skipping",
+                project_url,
+                self._base,
+            )
+            return None
+
+        project_path = project_url[len(self._base):].lstrip("/")
+        encoded_path = urllib.parse.quote(project_path, safe="")
+        url = (
+            f"{self._base}/api/v4/projects/{encoded_path}"
+            f"/repository/files/Chart.yaml/raw?ref=main"
+        )
+
+        async with self._semaphore:
+            try:
+                resp = await self._client.get(url, headers=self._headers)
+            except httpx.HTTPError as exc:
+                logger.warning("HTTP error fetching parent chart from %r: %s", project_url, exc)
+                return None
+
+        if resp.status_code == 404:
+            logger.warning("No Chart.yaml found for parent chart at %r", project_url)
+            return None
+        if not resp.is_success:
+            logger.warning(
+                "Unexpected status %d fetching parent chart from %r",
+                resp.status_code,
+                project_url,
+            )
+            return None
+
+        try:
+            chart = yaml.safe_load(resp.text)
+        except yaml.YAMLError as exc:
+            logger.warning("YAML parse error in parent chart from %r: %s", project_url, exc)
+            return None
+
+        if not isinstance(chart, dict):
+            return None
+
+        version = chart.get("version")
+        return str(version) if version else None
+
+    # ------------------------------------------------------------------
     # Pagination helper
     # ------------------------------------------------------------------
 
