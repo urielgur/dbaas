@@ -33,6 +33,7 @@ export interface DBTypeDescriptor {
   canonical_name: string;
   display_label: string;
   icon_name: string;
+  console_url_template: string;
 }
 
 export type ScanStatus = "ok" | "running" | "error" | "never";

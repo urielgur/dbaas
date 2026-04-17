@@ -60,4 +60,9 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     renderer: "text",
     sortable: true,
   },
+  {
+    key: "argocd_apps",
+    label: "Connect",
+    renderer: "connect",
+  },
 ];

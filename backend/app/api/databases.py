@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.config import settings
 from app.dependencies import get_current_user, get_storage
 from app.models.api import ListResponse
 from app.models.database import DatabaseRecord
@@ -84,6 +85,7 @@ async def list_db_types(
             "canonical_name": d.canonical_name,
             "display_label": d.display_label,
             "icon_name": d.icon_name,
+            "console_url_template": settings.console.get_template(d.canonical_name),
         }
         for d in DBTypeRegistry.all_types()
     ]

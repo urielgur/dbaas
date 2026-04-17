@@ -8,6 +8,7 @@
  */
 
 import { ArgoCDLinksField } from "./ArgoCDLinksField";
+import { ConnectField } from "./ConnectField";
 import { DBTypeField } from "./DBTypeField";
 import { LinkField } from "./LinkField";
 import { TextFieldRenderer } from "./TextFieldRenderer";
@@ -18,6 +19,7 @@ const registry: Record<string, FieldRenderer> = {
   link: LinkField,
   argoCDLinks: ArgoCDLinksField,
   dbType: DBTypeField,
+  connect: ConnectField,
 };
 
 export function getRenderer(key: string): FieldRenderer {

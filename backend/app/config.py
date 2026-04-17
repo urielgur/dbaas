@@ -47,6 +47,23 @@ class ArgoCDSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ARGOCD_")
 
 
+class ConsoleSettings(BaseSettings):
+    """URL templates for DB management consoles.
+
+    Supported placeholders: {cluster}, {db_name}, {group}
+    e.g. CONSOLE_ELASTICSEARCH_URL=https://kibana.{cluster}.example.com
+    """
+
+    elasticsearch_url: str = ""
+    postgresql_url: str = ""
+    mongodb_url: str = ""
+
+    model_config = SettingsConfigDict(env_prefix="CONSOLE_")
+
+    def get_template(self, canonical_name: str) -> str:
+        return getattr(self, f"{canonical_name}_url", "")
+
+
 class StorageSettings(BaseSettings):
     backend: Literal["json", "mongodb"] = "json"
     json_path: str = "data/databases.json"
@@ -72,6 +89,7 @@ class Settings(BaseSettings):
     argocd: ArgoCDSettings = ArgoCDSettings()
     storage: StorageSettings = StorageSettings()
     auth: AuthSettings = AuthSettings()
+    console: ConsoleSettings = ConsoleSettings()
     scan_interval_seconds: int = 300
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
