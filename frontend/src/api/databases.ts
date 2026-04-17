@@ -37,6 +37,21 @@ export async function listGroups(): Promise<string[]> {
   return data;
 }
 
+export interface ConnectResult {
+  cluster: string;
+  url: string;
+}
+
+export async function getConnectUrls(
+  dbId: string,
+  cluster?: string,
+): Promise<ConnectResult[]> {
+  const { data } = await apiClient.get<ConnectResult[]>(`/databases/${dbId}/connect`, {
+    params: cluster ? { cluster } : undefined,
+  });
+  return data;
+}
+
 export async function triggerScan(): Promise<void> {
   await apiClient.post("/scan");
 }

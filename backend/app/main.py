@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Trigger DB type registration before anything else runs
 import app.registry.types  # noqa: F401
 
-from app.api import auth, databases, scan
+from app.api import auth, connect, databases, scan
 from app.auth.local_provider import hash_password
 from app.collectors.argocd_collector import ArgoCDCollector
 from app.collectors.gitlab_collector import GitLabCollector
@@ -84,6 +84,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(databases.router, prefix="/api/v1")
+    app.include_router(connect.router, prefix="/api/v1")
     app.include_router(scan.router, prefix="/api/v1")
 
     @app.get("/health")
