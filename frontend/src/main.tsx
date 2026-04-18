@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import App from "./App.tsx";
 import { AuthProvider } from "./auth/AuthContext.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
+import { ExamplePage } from "./pages/ExamplePage.tsx";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -16,15 +17,21 @@ const queryClient = new QueryClient({
   },
 });
 
+const isExamplePage = window.location.pathname === "/example";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-        <Toaster position="bottom-right" richColors closeButton />
-      </AuthProvider>
-    </QueryClientProvider>
+    {isExamplePage ? (
+      <ExamplePage />
+    ) : (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+          <Toaster position="bottom-right" richColors closeButton />
+        </AuthProvider>
+      </QueryClientProvider>
+    )}
   </StrictMode>,
 );

@@ -20,6 +20,7 @@ export interface ColumnDefinition {
   rendererProps?: Record<string, unknown>;
   sortable?: boolean;
   filterable?: boolean;
+  className?: string;
 }
 
 export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
@@ -50,20 +51,16 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     rendererProps: { label: "Project" },
   },
   {
-    key: "argocd_apps",
-    label: "ArgoCD",
-    renderer: "argoCDLinks",
-  },
-  {
     key: "chart_version",
     label: "Chart Version",
-    renderer: "text",
+    renderer: "helmChart",
     sortable: true,
   },
   {
     key: "argocd_apps",
-    label: "Connect",
-    renderer: "connect",
+    label: "Manage",
+    renderer: "manage",
+    className: "min-w-[240px]",
   },
   {
     key: "notes",

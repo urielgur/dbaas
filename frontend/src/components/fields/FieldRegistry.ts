@@ -10,7 +10,9 @@
 import { ArgoCDLinksField } from "./ArgoCDLinksField";
 import { ConnectField } from "./ConnectField";
 import { DBTypeField } from "./DBTypeField";
+import { HelmChartField } from "./HelmChartField";
 import { LinkField } from "./LinkField";
+import { ManageField } from "./ManageField";
 import { NotesField } from "./NotesField";
 import { TextFieldRenderer } from "./TextFieldRenderer";
 import type { FieldRenderer } from "./types";
@@ -20,7 +22,9 @@ const registry: Record<string, FieldRenderer> = {
   link: LinkField,
   argoCDLinks: ArgoCDLinksField,
   dbType: DBTypeField,
+  helmChart: HelmChartField,
   connect: ConnectField,
+  manage: ManageField,
   notes: NotesField,
 };
 

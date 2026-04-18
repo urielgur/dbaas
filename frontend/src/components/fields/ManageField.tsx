@@ -1,0 +1,171 @@
+import { ExternalLink, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { getConnectUrls } from "../../api/databases";
+import { useDbTypes } from "../../hooks/useDbTypes";
+import type { ArgoAppInfo, DatabaseRecord } from "../../types/database";
+import type { FieldRendererProps } from "./types";
+
+// TODO: replace with real OpenShift console base URL and namespace prefix
+const OPENSHIFT_CONSOLE_BASE = "https://console.openshift.example.com/k8s/namespaces";
+const OPENSHIFT_NAMESPACE_PREFIX = "";  // e.g. "dbaas-" if namespaces are prefixed
+
+function openShiftUrl(app: ArgoAppInfo): string {
+  return `${OPENSHIFT_CONSOLE_BASE}/${OPENSHIFT_NAMESPACE_PREFIX}${app.app_name}`;
+}
+
+// ── Connect action ────────────────────────────────────────────────────────────
+
+const CREDENTIAL_PLACEHOLDERS = ["{username}", "{password}", "{host}", "{port}"];
+
+function needsSecret(template: string): boolean {
+  return CREDENTIAL_PLACEHOLDERS.some((p) => template.includes(p));
+}
+
+function applyTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? "");
+}
+
+function ConnectAction({
+  record,
+  app,
+  template,
+}: {
+  record: DatabaseRecord;
+  app: ArgoAppInfo;
+  template: string;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const linkCls =
+    "inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 transition-colors";
+
+  if (needsSecret(template)) {
+    async function handleClick() {
+      setLoading(true);
+      setError(null);
+      try {
+        const results = await getConnectUrls(record.id, app.cluster);
+        for (const { url } of results) {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    return (
+      <span className="flex flex-col">
+        <button onClick={handleClick} disabled={loading} className={linkCls}>
+          {loading ? (
+            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+          ) : (
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          )}
+          Connect
+        </button>
+        {error && <span className="text-xs text-red-500">{error}</span>}
+      </span>
+    );
+  }
+
+  const href = applyTemplate(template, {
+    db_name: record.db_name,
+    group: record.group,
+    db_type: record.db_type,
+    cluster: app.cluster,
+  });
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={linkCls}>
+      <ExternalLink className="w-3 h-3" aria-hidden="true" />
+      Connect
+    </a>
+  );
+}
+
+// ── Per-cluster row ───────────────────────────────────────────────────────────
+
+function ClusterRow({
+  app,
+  record,
+  connectTemplate,
+}: {
+  app: ArgoAppInfo;
+  record: DatabaseRecord;
+  connectTemplate: string | null;
+}) {
+  const { synced, out_of_sync } = app.sync_stats;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {/* Row 1: cluster name + sync badges */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <a
+          href={app.app_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-800 hover:underline shrink-0"
+        >
+          {app.cluster}
+          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+        </a>
+        {synced > 0 && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+            {synced}
+          </span>
+        )}
+        {out_of_sync > 0 && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+            {out_of_sync}
+          </span>
+        )}
+      </div>
+
+      {/* Row 2: connect + openshift */}
+      <div className="flex items-center gap-3 pl-0.5">
+        {connectTemplate && (
+          <ConnectAction record={record} app={app} template={connectTemplate} />
+        )}
+        <a
+          href={openShiftUrl(app)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 transition-colors"
+        >
+          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          OpenShift
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ── Main renderer ─────────────────────────────────────────────────────────────
+
+export function ManageField({ record, value }: FieldRendererProps) {
+  const apps = value as ArgoAppInfo[] | undefined;
+  const { data: dbTypes } = useDbTypes();
+
+  if (!apps || apps.length === 0) {
+    return <span className="text-gray-400 text-sm">—</span>;
+  }
+
+  const descriptor = dbTypes?.find((t) => t.canonical_name === record.db_type);
+  const connectTemplate = descriptor?.console_url_template ?? null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {apps.map((app) => (
+        <ClusterRow
+          key={`${app.cluster}-${app.app_name}`}
+          app={app}
+          record={record}
+          connectTemplate={connectTemplate}
+        />
+      ))}
+    </div>
+  );
+}

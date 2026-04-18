@@ -62,7 +62,7 @@ export function DatabaseTable({
               <th
                 key={col.key}
                 scope="col"
-                className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap${col.className ? ` ${col.className}` : ""}`}
               >
                 {col.sortable ? (
                   <button

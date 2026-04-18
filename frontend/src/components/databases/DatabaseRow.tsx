@@ -21,7 +21,7 @@ export function DatabaseRow({ record, columns }: DatabaseRowProps) {
         const Renderer = getRenderer(col.renderer);
         const value = extractValue(record, col.key);
         return (
-          <td key={col.key} className="px-4 py-3 align-top">
+          <td key={col.key} className={`px-4 py-3 align-top${col.className ? ` ${col.className}` : ""}`}>
             <Renderer record={record} columnDef={col} value={value} />
           </td>
         );
