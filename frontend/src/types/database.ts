@@ -26,6 +26,7 @@ export interface DatabaseRecord {
   chart_name: string;
   argocd_apps: ArgoAppInfo[];
   extra_fields: Record<string, unknown>;
+  notes: string;
   last_scanned_at: string;
 }
 

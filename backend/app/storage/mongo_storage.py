@@ -32,6 +32,9 @@ class MongoStorageBackend(StorageBackend):
         self._uri = uri
         self._database = database
 
+    async def update_notes(self, record_id: str, notes: str) -> bool:
+        raise NotImplementedError(_NOT_CONFIGURED)
+
     async def get_all(self) -> list[DatabaseRecord]:
         raise NotImplementedError(_NOT_CONFIGURED)
 

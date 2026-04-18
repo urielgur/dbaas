@@ -27,6 +27,10 @@ class StorageBackend(ABC):
         """Replace the full dataset idempotently. Safe to call after every scan."""
 
     @abstractmethod
+    async def update_notes(self, record_id: str, notes: str) -> bool:
+        """Update the notes field for a single record. Returns False if not found."""
+
+    @abstractmethod
     async def get_scan_metadata(self) -> ScanMetadata: ...
 
     @abstractmethod

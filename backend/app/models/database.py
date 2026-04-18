@@ -45,6 +45,7 @@ class DatabaseRecord(BaseModel):
     chart_name: str
     argocd_apps: list[ArgoAppInfo] = []
     extra_fields: dict[str, Any] = {}
+    notes: str = ""
     last_scanned_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )

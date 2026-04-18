@@ -52,6 +52,10 @@ export async function getConnectUrls(
   return data;
 }
 
+export async function updateNotes(id: string, notes: string): Promise<void> {
+  await apiClient.patch(`/databases/${id}/notes`, { notes });
+}
+
 export async function triggerScan(): Promise<void> {
   await apiClient.post("/scan");
 }

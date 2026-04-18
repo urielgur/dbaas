@@ -87,9 +87,23 @@ class JsonStorageBackend(StorageBackend):
             }
             for record in records:
                 serialized = json.loads(record.model_dump_json(by_alias=True))
+                # Preserve user-edited notes across scans
+                prev = existing.get(serialized["_id"])
+                if prev and prev.get("notes"):
+                    serialized["notes"] = prev["notes"]
                 existing[serialized["_id"]] = serialized
             raw["records"] = list(existing.values())
             self._write_raw(raw)
+
+    async def update_notes(self, record_id: str, notes: str) -> bool:
+        async with self._lock:
+            raw = self._read_raw()
+            for r in raw.get("records", []):
+                if r.get("_id") == record_id:
+                    r["notes"] = notes
+                    self._write_raw(raw)
+                    return True
+        return False
 
     async def get_scan_metadata(self) -> ScanMetadata:
         async with self._lock:

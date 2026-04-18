@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from app.config import settings
 from app.dependencies import get_current_user, get_storage
@@ -103,3 +104,20 @@ async def get_database(
     if record is None:
         raise HTTPException(status_code=404, detail="Database not found")
     return record.model_dump_api()
+
+
+class NotesUpdate(BaseModel):
+    notes: str
+
+
+@router.patch("/{db_id}/notes")
+async def update_notes(
+    db_id: str,
+    body: NotesUpdate,
+    _: Annotated[UserRecord, Depends(get_current_user)],
+    storage: Annotated[StorageBackend, Depends(get_storage)],
+) -> dict:
+    found = await storage.update_notes(db_id, body.notes)
+    if not found:
+        raise HTTPException(status_code=404, detail="Database not found")
+    return {"ok": True}

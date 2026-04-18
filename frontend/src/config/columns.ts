@@ -65,4 +65,9 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     label: "Connect",
     renderer: "connect",
   },
+  {
+    key: "notes",
+    label: "Notes",
+    renderer: "notes",
+  },
 ];
