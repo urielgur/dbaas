@@ -34,6 +34,7 @@ async def list_databases(
     db_type: str | None = Query(default=None, description="Filter by DB type"),
     namespace: str | None = Query(default=None, description="Filter by GitLab namespace"),
     group: str | None = Query(default=None, description="Filter by group"),
+    cluster: str | None = Query(default=None, description="Filter by ArgoCD cluster"),
     q: str | None = Query(default=None, description="Substring search on db_name"),
     limit: int = Query(default=50, ge=1, le=1000, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Page offset"),
@@ -49,6 +50,8 @@ async def list_databases(
         records = [r for r in records if r.gitlab_namespace == namespace]
     if group:
         records = [r for r in records if r.group == group]
+    if cluster:
+        records = [r for r in records if any(a.cluster == cluster for a in r.argocd_apps)]
     if q:
         q_lower = q.lower()
         records = [r for r in records if q_lower in r.db_name.lower()]
@@ -82,6 +85,15 @@ async def list_groups(
 ) -> list[str]:
     records = await storage.get_all()
     return sorted({r.group for r in records if r.group})
+
+
+@router.get("/clusters")
+async def list_clusters(
+    _: Annotated[UserRecord, Depends(get_current_user)],
+    storage: Annotated[StorageBackend, Depends(get_storage)],
+) -> list[str]:
+    records = await storage.get_all()
+    return sorted({a.cluster for r in records for a in r.argocd_apps if a.cluster})
 
 
 @router.get("/types")

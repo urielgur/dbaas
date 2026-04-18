@@ -31,16 +31,22 @@ function ExamplePageInner() {
   const [q, setQ] = useState("");
   const [dbType, setDbType] = useState("");
   const [group, setGroup] = useState("");
+  const [cluster, setCluster] = useState("");
   const [sortBy, setSortBy] = useState("db_name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   // Reset to page 1 on filter change
-  useEffect(() => { setPage(1); }, [q, dbType, group]);
+  useEffect(() => { setPage(1); }, [q, dbType, group, cluster]);
 
   const allGroups = useMemo(
     () => [...new Set(EXAMPLE_DATABASES.map((d) => d.group))].sort(),
+    [],
+  );
+
+  const allClusters = useMemo(
+    () => [...new Set(EXAMPLE_DATABASES.flatMap((d) => d.argocd_apps.map((a) => a.cluster)))].sort(),
     [],
   );
 
@@ -48,6 +54,7 @@ function ExamplePageInner() {
     let rows = EXAMPLE_DATABASES.filter((d) => {
       if (dbType && d.db_type !== dbType) return false;
       if (group && d.group !== group) return false;
+      if (cluster && !d.argocd_apps.some((a) => a.cluster === cluster)) return false;
       if (q) {
         const lq = q.toLowerCase();
         if (
@@ -67,7 +74,7 @@ function ExamplePageInner() {
     });
 
     return rows;
-  }, [q, dbType, group, sortBy, sortDir]);
+  }, [q, dbType, group, cluster, sortBy, sortDir]);
 
   const paginated: DatabaseRecord[] = filtered.slice(
     (page - 1) * pageSize,
@@ -80,7 +87,7 @@ function ExamplePageInner() {
     setPage(1);
   }
 
-  const hasFilters = !!(q || dbType || group);
+  const hasFilters = !!(q || dbType || group || cluster);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -162,6 +169,23 @@ function ExamplePageInner() {
                 ))}
               </select>
             </div>
+
+            <div className="flex-1 sm:max-w-xs">
+              <label htmlFor="ex-cluster-filter" className="block text-xs font-medium text-gray-500 mb-1">
+                Cluster
+              </label>
+              <select
+                id="ex-cluster-filter"
+                value={cluster}
+                onChange={(e) => setCluster(e.target.value)}
+                className={INPUT_CLS}
+              >
+                <option value="">All clusters</option>
+                {allClusters.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Fake scan button */}
@@ -182,7 +206,7 @@ function ExamplePageInner() {
 
         <ErrorBoundary>
           <DatabaseTable
-            records={paginated}
+            records={cluster ? paginated.map((r) => ({ ...r, argocd_apps: r.argocd_apps.filter((a) => a.cluster === cluster) })) : paginated}
             sortBy={sortBy}
             sortDir={sortDir}
             onSort={handleSort}

@@ -8,6 +8,7 @@ import { Header } from "./components/layout/Header";
 import { ScanButton } from "./components/scan/ScanButton";
 import { useDbTypes } from "./hooks/useDbTypes";
 import { useGroups } from "./hooks/useGroups";
+import { useClusters } from "./hooks/useClusters";
 import { useDatabases } from "./hooks/useDatabases";
 import { useUrlFilters } from "./hooks/useUrlFilters";
 
@@ -17,12 +18,13 @@ const INPUT_CLS =
 
 export default function App() {
   const { filters, setFilters } = useUrlFilters();
-  const { q, db_type, group, page, page_size, sort_by, sort_dir } = filters;
+  const { q, db_type, group, cluster, page, page_size, sort_by, sort_dir } = filters;
 
   const { data, isLoading, isError, refetch } = useDatabases({
     q: q || undefined,
     db_type: db_type || undefined,
     group: group || undefined,
+    cluster: cluster || undefined,
     limit: page_size,
     offset: (page - 1) * page_size,
     sort_by: sort_by || undefined,
@@ -31,8 +33,9 @@ export default function App() {
 
   const { data: dbTypes } = useDbTypes();
   const { data: groups } = useGroups();
+  const { data: clusters } = useClusters();
 
-  const hasFilters = !!(q || db_type || group);
+  const hasFilters = !!(q || db_type || group || cluster);
 
   function handleSearch(val: string) {
     setFilters({ q: val, page: 1 });
@@ -44,6 +47,10 @@ export default function App() {
 
   function handleGroupChange(val: string) {
     setFilters({ group: val, page: 1 });
+  }
+
+  function handleClusterChange(val: string) {
+    setFilters({ cluster: val, page: 1 });
   }
 
   function handleSort(key: string, dir: "asc" | "desc") {
@@ -113,6 +120,24 @@ export default function App() {
                 ))}
               </select>
             </div>
+
+            {/* Cluster filter */}
+            <div className="flex-1 sm:max-w-xs">
+              <label htmlFor="cluster-filter" className="block text-xs font-medium text-gray-500 mb-1">
+                Cluster
+              </label>
+              <select
+                id="cluster-filter"
+                value={cluster}
+                onChange={(e) => handleClusterChange(e.target.value)}
+                className={INPUT_CLS}
+              >
+                <option value="">All clusters</option>
+                {clusters?.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <ScanButton />
@@ -140,7 +165,7 @@ export default function App() {
         {data && (
           <ErrorBoundary>
             <DatabaseTable
-              records={data.items}
+              records={cluster ? data.items.map((r) => ({ ...r, argocd_apps: r.argocd_apps.filter((a) => a.cluster === cluster) })) : data.items}
               sortBy={sort_by}
               sortDir={sort_dir}
               onSort={handleSort}

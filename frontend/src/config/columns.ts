@@ -45,12 +45,6 @@ export const COLUMN_DEFINITIONS: ColumnDefinition[] = [
     filterable: true,
   },
   {
-    key: "gitlab_project_url",
-    label: "GitLab",
-    renderer: "link",
-    rendererProps: { label: "Project" },
-  },
-  {
     key: "chart_version",
     label: "Chart Version",
     renderer: "helmChart",

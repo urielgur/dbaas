@@ -9,6 +9,7 @@ export interface UrlFilters {
   q: string;
   db_type: string;
   group: string;
+  cluster: string;
   page: number;
   page_size: number;
   sort_by: string;
@@ -25,6 +26,7 @@ function readFromUrl(): UrlFilters {
     q: p.get("q") ?? "",
     db_type: p.get("db_type") ?? "",
     group: p.get("group") ?? "",
+    cluster: p.get("cluster") ?? "",
     page: Math.max(1, parseInt(p.get("page") ?? "1", 10)),
     page_size,
     sort_by: p.get("sort_by") ?? "",
@@ -37,6 +39,7 @@ function writeToUrl(filters: UrlFilters) {
   if (filters.q) p.set("q", filters.q);
   if (filters.db_type) p.set("db_type", filters.db_type);
   if (filters.group) p.set("group", filters.group);
+  if (filters.cluster) p.set("cluster", filters.cluster);
   if (filters.page > 1) p.set("page", String(filters.page));
   if (filters.page_size !== DEFAULT_PAGE_SIZE) p.set("page_size", String(filters.page_size));
   if (filters.sort_by) p.set("sort_by", filters.sort_by);

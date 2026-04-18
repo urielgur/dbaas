@@ -10,6 +10,7 @@ export interface DatabaseFilters {
   db_type?: string;
   namespace?: string;
   group?: string;
+  cluster?: string;
   q?: string;
   limit?: number;
   offset?: number;
@@ -34,6 +35,11 @@ export async function listDbTypes(): Promise<DBTypeDescriptor[]> {
 
 export async function listGroups(): Promise<string[]> {
   const { data } = await apiClient.get<string[]>("/databases/groups");
+  return data;
+}
+
+export async function listClusters(): Promise<string[]> {
+  const { data } = await apiClient.get<string[]>("/databases/clusters");
   return data;
 }
 
