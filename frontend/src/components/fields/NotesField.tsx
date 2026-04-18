@@ -1,17 +1,20 @@
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { updateNotes } from "../../api/databases";
 import type { FieldRendererProps } from "./types";
 
 export function NotesField({ record }: FieldRendererProps) {
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(record.notes ?? "");
+  const [savedNotes, setSavedNotes] = useState(record.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function startEdit() {
-    setDraft(record.notes ?? "");
+    setDraft(savedNotes);
     setEditing(true);
     setError(null);
     setTimeout(() => textareaRef.current?.focus(), 0);
@@ -23,7 +26,7 @@ export function NotesField({ record }: FieldRendererProps) {
   }
 
   async function save() {
-    if (draft === (record.notes ?? "")) {
+    if (draft === savedNotes) {
       setEditing(false);
       return;
     }
@@ -31,8 +34,9 @@ export function NotesField({ record }: FieldRendererProps) {
     setError(null);
     try {
       await updateNotes(record.id, draft);
-      record.notes = draft;
+      setSavedNotes(draft);
       setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["databases"] });
     } catch {
       setError("Save failed");
     } finally {
@@ -48,7 +52,8 @@ export function NotesField({ record }: FieldRendererProps) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={3}
-          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+          style={{ minHeight: "72px" }}
+          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
           placeholder="Add a note…"
         />
         <div className="flex items-center gap-1">
@@ -59,9 +64,9 @@ export function NotesField({ record }: FieldRendererProps) {
             title="Save"
           >
             {saving ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
             ) : (
-              <Check className="w-3 h-3" />
+              <Check className="w-3 h-3" aria-hidden="true" />
             )}
             Save
           </button>
@@ -71,7 +76,7 @@ export function NotesField({ record }: FieldRendererProps) {
             className="inline-flex items-center gap-0.5 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
             title="Cancel"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden="true" />
             Cancel
           </button>
         </div>
@@ -84,16 +89,19 @@ export function NotesField({ record }: FieldRendererProps) {
     <div
       className="group flex items-start gap-1 cursor-pointer min-w-[120px]"
       onClick={startEdit}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && startEdit()}
+      role="button"
+      tabIndex={0}
       title="Click to edit notes"
     >
-      {record.notes ? (
+      {savedNotes ? (
         <span className="text-sm text-gray-700 whitespace-pre-wrap break-words max-w-[240px]">
-          {record.notes}
+          {savedNotes}
+          <Pencil className="inline w-3 h-3 ml-1 mb-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" aria-hidden="true" />
         </span>
       ) : (
-        <span className="text-sm text-gray-300 italic">Add note…</span>
+        <span className="text-sm text-brand-500 font-medium select-none">+ Add note</span>
       )}
-      <Pencil className="w-3 h-3 mt-0.5 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
     </div>
   );
 }

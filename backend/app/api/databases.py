@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.dependencies import get_current_user, get_storage
@@ -14,6 +14,8 @@ from app.registry.db_type_registry import DBTypeRegistry
 from app.storage.base import StorageBackend
 
 router = APIRouter(prefix="/databases", tags=["databases"])
+
+_SORTABLE_FIELDS = frozenset({"db_type", "db_name", "group", "chart_version", "last_scanned_at"})
 
 
 def _sort_key(record: DatabaseRecord, field: str) -> str | int | float:
@@ -54,6 +56,11 @@ async def list_databases(
     total = len(records)
 
     if sort_by:
+        if sort_by not in _SORTABLE_FIELDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid sort_by field '{sort_by}'. Allowed: {sorted(_SORTABLE_FIELDS)}",
+            )
         records.sort(
             key=lambda r: _sort_key(r, sort_by),
             reverse=(sort_dir == "desc"),
@@ -107,7 +114,7 @@ async def get_database(
 
 
 class NotesUpdate(BaseModel):
-    notes: str
+    notes: str = Field(max_length=10000)
 
 
 @router.patch("/{db_id}/notes")

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import httpx
 from fastapi import FastAPI
@@ -10,15 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Trigger DB type registration before anything else runs
 import app.registry.types  # noqa: F401
-
 from app.api import auth, connect, databases, scan
 from app.auth.local_provider import hash_password
 from app.collectors.argocd_collector import ArgoCDCollector
 from app.collectors.gitlab_collector import GitLabCollector
 from app.config import settings
-from app.dependencies import get_storage
 from app.models.user import UserRecord
 from app.scanner.scan_orchestrator import ScanOrchestrator, ScanScheduler
+from app.storage.base import StorageBackend
+from app.storage.json_storage import JsonStorageBackend
+from app.storage.mongo_storage import MongoStorageBackend
 from app.storage.user_storage import UserJsonStorage
 
 logging.basicConfig(
@@ -30,23 +31,38 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Fail fast on missing secret key before anything starts
+    if not settings.auth.secret_key:
+        raise RuntimeError(
+            "AUTH_SECRET_KEY is not set. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+
     # Shared HTTP client — one connection pool for all collectors
     http_client = httpx.AsyncClient(timeout=30.0)
 
-    storage = get_storage()
+    # Storage singleton — one instance (and one lock) shared across all requests
+    storage: StorageBackend
+    if settings.storage.backend == "mongodb":
+        if not settings.storage.mongo_uri:
+            raise RuntimeError("STORAGE_MONGO_URI must be set when STORAGE_BACKEND=mongodb")
+        storage = MongoStorageBackend(settings.storage.mongo_uri, settings.storage.mongo_database)
+    else:
+        storage = JsonStorageBackend(settings.storage.json_path)
+
     gitlab_collector = GitLabCollector(settings.gitlab, http_client)
     argocd_collector = ArgoCDCollector(settings.argocd.instances, http_client)
     orchestrator = ScanOrchestrator(gitlab_collector, argocd_collector, storage, settings.argocd.app_name_prefix)
     scheduler = ScanScheduler(orchestrator, settings.scan_interval_seconds)
 
+    app.state.storage = storage
+    app.state.http_client = http_client
     app.state.orchestrator = orchestrator
     app.state.scheduler = scheduler
 
     await scheduler.start()
 
     # Bootstrap admin user if no users exist and a password is configured
-    if not settings.auth.secret_key:
-        logger.warning("AUTH_SECRET_KEY is not set — tokens are signed with an empty key (insecure)")
     user_storage = UserJsonStorage(settings.auth.users_json_path)
     if await user_storage.count() == 0 and settings.auth.bootstrap_admin_password:
         admin = UserRecord(

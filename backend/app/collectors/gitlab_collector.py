@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import urllib.parse
 from dataclasses import dataclass
 from typing import Any
-
-import urllib.parse
 
 import httpx
 import yaml
@@ -305,11 +304,16 @@ class GitLabCollector:
         url: str,
         params: dict[str, Any],
         parse: Any,
+        max_pages: int = 500,
     ) -> list[Any]:
         results: list[Any] = []
         next_page: str | None = "1"
+        page_count = 0
 
         while next_page:
+            page_count += 1
+            if page_count > max_pages:
+                raise RuntimeError(f"Pagination exceeded {max_pages} pages for {url}")
             async with self._semaphore:
                 resp = await self._client.get(
                     url,

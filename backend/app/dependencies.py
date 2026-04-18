@@ -15,19 +15,13 @@ from app.config import settings
 from app.models.user import UserRecord
 from app.scanner.scan_orchestrator import ScanOrchestrator, ScanScheduler
 from app.storage.base import StorageBackend
-from app.storage.json_storage import JsonStorageBackend
-from app.storage.mongo_storage import MongoStorageBackend
 from app.storage.user_storage import UserJsonStorage
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
-def get_storage() -> StorageBackend:
-    if settings.storage.backend == "mongodb":
-        if not settings.storage.mongo_uri:
-            raise RuntimeError("STORAGE_MONGO_URI must be set when STORAGE_BACKEND=mongodb")
-        return MongoStorageBackend(settings.storage.mongo_uri, settings.storage.mongo_database)
-    return JsonStorageBackend(settings.storage.json_path)
+def get_storage(request: Request) -> StorageBackend:
+    return request.app.state.storage
 
 
 def get_user_storage() -> UserJsonStorage:
@@ -59,8 +53,8 @@ async def get_current_user(
     return user
 
 
-def get_http_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=30.0)
+def get_http_client(request: Request) -> httpx.AsyncClient:
+    return request.app.state.http_client
 
 
 def get_gitlab_collector(

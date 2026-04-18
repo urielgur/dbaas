@@ -5,8 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from app.models.database import DatabaseRecord
-
 
 class ListResponse(BaseModel):
     items: list[dict[str, Any]]

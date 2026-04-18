@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import status as http_status
 
 from app.dependencies import get_current_user, get_scheduler, get_storage
 from app.models.api import ScanStatusResponse
@@ -16,9 +17,11 @@ router = APIRouter(prefix="/scan", tags=["scan"])
 @router.post("", status_code=202)
 async def trigger_scan(
     background_tasks: BackgroundTasks,
-    _: Annotated[UserRecord, Depends(get_current_user)],
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
     scheduler: Annotated[ScanScheduler, Depends(get_scheduler)],
 ) -> dict[str, str]:
+    if not current_user.is_admin:
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Admin access required")
     background_tasks.add_task(scheduler.trigger_now)
     return {"status": "accepted", "message": "Scan triggered"}
 

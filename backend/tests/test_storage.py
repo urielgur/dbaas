@@ -67,3 +67,31 @@ async def test_atomic_write_creates_dirs(tmp_path: Path) -> None:
     storage = JsonStorageBackend(nested)
     await storage.upsert_many([])
     assert nested.exists()
+
+
+async def test_update_notes_sets_value(
+    tmp_storage: JsonStorageBackend, sample_record: DatabaseRecord
+) -> None:
+    await tmp_storage.upsert_many([sample_record])
+    found = await tmp_storage.update_notes("gitlab-project-1", "hello world")
+    assert found is True
+    record = await tmp_storage.get_by_id("gitlab-project-1")
+    assert record is not None
+    assert record.notes == "hello world"
+
+
+async def test_update_notes_returns_false_for_missing(tmp_storage: JsonStorageBackend) -> None:
+    result = await tmp_storage.update_notes("nonexistent-id", "some note")
+    assert result is False
+
+
+async def test_upsert_preserves_notes(
+    tmp_storage: JsonStorageBackend, sample_record: DatabaseRecord
+) -> None:
+    await tmp_storage.upsert_many([sample_record])
+    await tmp_storage.update_notes("gitlab-project-1", "saved note")
+    # Simulate a re-scan by upserting the same record again (as a scan would)
+    await tmp_storage.upsert_many([sample_record])
+    record = await tmp_storage.get_by_id("gitlab-project-1")
+    assert record is not None
+    assert record.notes == "saved note"

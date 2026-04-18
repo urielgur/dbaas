@@ -50,9 +50,11 @@ async def get_me(
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     body: CreateUserRequest,
-    _: Annotated[UserRecord, Depends(get_current_user)],
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
     user_storage: Annotated[UserJsonStorage, Depends(get_user_storage)],
 ) -> UserResponse:
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     existing = await user_storage.get_user(body.username)
     if existing is not None:
         raise HTTPException(
@@ -74,9 +76,11 @@ async def create_user(
 
 @router.get("/users", response_model=list[UserResponse])
 async def list_users(
-    _: Annotated[UserRecord, Depends(get_current_user)],
+    current_user: Annotated[UserRecord, Depends(get_current_user)],
     user_storage: Annotated[UserJsonStorage, Depends(get_user_storage)],
 ) -> list[UserResponse]:
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     users = await user_storage.list_users()
     return [
         UserResponse(username=u.username, is_admin=u.is_admin, created_at=u.created_at)

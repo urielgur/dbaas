@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.collectors.argocd_collector import ArgoCDCollector
 from app.collectors.gitlab_collector import GitLabCollector
@@ -50,24 +50,37 @@ class ScanOrchestrator:
 
     async def run(self) -> ScanResult:
         await self._storage.set_scan_metadata(
-            ScanMetadata(status="running", last_scan_at=datetime.now(timezone.utc))
+            ScanMetadata(status="running", last_scan_at=datetime.now(UTC))
         )
 
+        _SCAN_TIMEOUT = 300  # 5 minutes
         start = asyncio.get_running_loop().time()
         try:
-            gitlab_dbs, argocd_app_map = await asyncio.gather(
-                self._gitlab.collect(),
-                self._argocd.collect(),
-            )
+            try:
+                gitlab_dbs, argocd_app_map = await asyncio.wait_for(
+                    asyncio.gather(
+                        self._gitlab.collect(),
+                        self._argocd.collect(),
+                    ),
+                    timeout=_SCAN_TIMEOUT,
+                )
+            except TimeoutError:
+                raise RuntimeError(f"Scan timed out after {_SCAN_TIMEOUT} seconds")
         except Exception as exc:
             await self._storage.set_scan_metadata(
                 ScanMetadata(
                     status="error",
-                    last_scan_at=datetime.now(timezone.utc),
+                    last_scan_at=datetime.now(UTC),
                     error_message=str(exc),
                 )
             )
             raise
+
+        if not gitlab_dbs:
+            logger.warning(
+                "GitLab collector returned no projects — possible misconfiguration "
+                "or outage; existing records will be retained unchanged"
+            )
 
         # Track which ArgoCD app keys were matched
         matched_keys: set[str] = set()
@@ -127,7 +140,7 @@ class ScanOrchestrator:
         )
 
         await self._storage.set_scan_metadata(
-            ScanMetadata(status="ok", last_scan_at=datetime.now(timezone.utc))
+            ScanMetadata(status="ok", last_scan_at=datetime.now(UTC))
         )
 
         return ScanResult(
@@ -204,7 +217,7 @@ class ScanScheduler:
         """Sleep for the configured interval, but wake early if trigger_now() fires."""
         try:
             await asyncio.wait_for(self._trigger.wait(), timeout=self._interval)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
     async def _loop(self, run_immediately: bool = False) -> None:
