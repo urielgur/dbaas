@@ -24,16 +24,20 @@ class MongoStorageBackend(StorageBackend):
 
     def __init__(self, uri: str, database: str = "dbaas") -> None:
         try:
-            import motor.motor_asyncio  # noqa: F401
+            import motor.motor_asyncio
         except ImportError as e:
             raise ImportError(
                 "motor is required for MongoDB storage. Run: pip install motor"
             ) from e
-        self._uri = uri
-        self._database = database
+        client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self._records = client[database]["databases"]
 
     async def update_notes(self, record_id: str, notes: str) -> bool:
-        raise NotImplementedError(_NOT_CONFIGURED)
+        result = await self._records.update_one(
+            {"_id": record_id},
+            {"$set": {"notes": notes}},
+        )
+        return result.matched_count > 0
 
     async def get_all(self) -> list[DatabaseRecord]:
         raise NotImplementedError(_NOT_CONFIGURED)
