@@ -97,7 +97,7 @@ function ClusterRow({
   record: DatabaseRecord;
   connectTemplate: string | null;
 }) {
-  const { synced, out_of_sync } = app.sync_stats;
+  const { synced, out_of_sync, out_of_sync_resources } = app.sync_stats;
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -118,8 +118,19 @@ function ClusterRow({
           </span>
         )}
         {out_of_sync > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-            {out_of_sync}
+          <span className="relative group/oos inline-flex items-center">
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 cursor-help">
+              {out_of_sync}
+            </span>
+            {out_of_sync_resources.length > 0 && (
+              <span className="absolute bottom-full left-0 mb-1.5 hidden group-hover/oos:flex flex-col gap-0.5 bg-gray-900 text-white text-xs rounded-md px-3 py-2 shadow-lg z-50 min-w-max">
+                <span className="font-semibold mb-0.5 text-gray-300">Out of sync</span>
+                {out_of_sync_resources.map((r) => (
+                  <span key={r} className="font-mono">{r}</span>
+                ))}
+                <span className="absolute top-full left-3 border-4 border-transparent border-t-gray-900" />
+              </span>
+            )}
           </span>
         )}
       </div>

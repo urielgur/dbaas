@@ -10,6 +10,7 @@ class SyncStats(BaseModel):
     synced: int = 0
     out_of_sync: int = 0
     unknown: int = 0
+    out_of_sync_resources: list[str] = []  # e.g. ["Deployment/my-app", "ConfigMap/my-cfg"]
 
 
 class ArgoAppInfo(BaseModel):

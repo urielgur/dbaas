@@ -140,13 +140,22 @@ class ArgoCDCollector:
         synced = 0
         out_of_sync = 0
         unknown = 0
+        out_of_sync_resources: list[str] = []
         for resource in resources:
             status = resource.get("status", "").lower()
+            kind = resource.get("kind", "")
+            name = resource.get("name", "")
             if status == "synced":
                 synced += 1
             elif status == "outofsync":
                 out_of_sync += 1
+                out_of_sync_resources.append(f"{kind}/{name}" if kind and name else name or kind)
             else:
                 unknown += 1
-        return SyncStats(synced=synced, out_of_sync=out_of_sync, unknown=unknown)
+        return SyncStats(
+            synced=synced,
+            out_of_sync=out_of_sync,
+            unknown=unknown,
+            out_of_sync_resources=out_of_sync_resources,
+        )
 

@@ -2,6 +2,7 @@ export interface SyncStats {
   synced: number;
   out_of_sync: number;
   unknown: number;
+  out_of_sync_resources: string[];
 }
 
 export interface ArgoAppInfo {
