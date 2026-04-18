@@ -68,8 +68,8 @@ function ExamplePageInner() {
     });
 
     rows = [...rows].sort((a, b) => {
-      const aVal = String((a as Record<string, unknown>)[sortBy] ?? "");
-      const bVal = String((b as Record<string, unknown>)[sortBy] ?? "");
+      const aVal = String((a as unknown as Record<string, unknown>)[sortBy] ?? "");
+      const bVal = String((b as unknown as Record<string, unknown>)[sortBy] ?? "");
       return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
 
