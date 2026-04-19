@@ -5,12 +5,17 @@ import { useDbTypes } from "../../hooks/useDbTypes";
 import type { ArgoAppInfo, DatabaseRecord } from "../../types/database";
 import type { FieldRendererProps } from "./types";
 
-// TODO: replace with real OpenShift console base URL and namespace prefix
+// TODO: replace with real OpenShift console base URL
 const OPENSHIFT_CONSOLE_BASE = "https://console.openshift.example.com/k8s/namespaces";
-const OPENSHIFT_NAMESPACE_PREFIX = "";  // e.g. "dbaas-" if namespaces are prefixed
 
-function openShiftUrl(app: ArgoAppInfo): string {
-  return `${OPENSHIFT_CONSOLE_BASE}/${OPENSHIFT_NAMESPACE_PREFIX}${app.app_name}`;
+// Namespace convention: dbaas-{db_type}-{group}-{db_name}
+// e.g. dbaas-mongodb-prod-my-db
+function openShiftNamespace(record: DatabaseRecord): string {
+  return `dbaas-${record.db_type}-${record.group}-${record.db_name}`;
+}
+
+function openShiftUrl(record: DatabaseRecord): string {
+  return `${OPENSHIFT_CONSOLE_BASE}/${openShiftNamespace(record)}`;
 }
 
 // ── Connect action ────────────────────────────────────────────────────────────
@@ -141,7 +146,7 @@ function ClusterRow({
           <ConnectAction record={record} app={app} template={connectTemplate} />
         )}
         <a
-          href={openShiftUrl(app)}
+          href={openShiftUrl(record)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 transition-colors"

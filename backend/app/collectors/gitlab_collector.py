@@ -15,6 +15,23 @@ from app.registry.db_type_registry import DBTypeRegistry
 logger = logging.getLogger(__name__)
 
 
+def _strip_type_suffix(project_slug: str, db_type: str) -> str:
+    """
+    Remove the db type suffix from a project slug.
+
+    Checks the canonical name and all registered aliases so that
+    "my-db-pg" → "my-db" just as "my-db-postgresql" → "my-db".
+    """
+    descriptor = DBTypeRegistry.get_descriptor(db_type)
+    candidates = descriptor.aliases if descriptor else [db_type]
+    slug_lower = project_slug.lower()
+    for candidate in candidates:
+        suffix = f"-{candidate.lower()}"
+        if slug_lower.endswith(suffix):
+            return project_slug[: -len(suffix)]
+    return project_slug
+
+
 @dataclass
 class SubgroupInfo:
     id: int
@@ -225,8 +242,12 @@ class GitLabCollector:
             )
 
         annotations: dict[str, str] = chart.get("annotations") or {}
-        # db_name defaults to the GitLab project slug; annotation can override it
-        db_name = annotations.get("dbaas/db-name", project.name)
+        # db_name: annotation takes priority, otherwise strip the db type suffix
+        # from the project slug (e.g. "my-db-mongodb" → "my-db").
+        if "dbaas/db-name" in annotations:
+            db_name = annotations["dbaas/db-name"]
+        else:
+            db_name = _strip_type_suffix(project.name, db_type)
         group = project.namespace_full_path.rstrip("/").split("/")[-1]
 
         return RawGitLabDB(
