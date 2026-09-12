@@ -1,5 +1,9 @@
 FROM node:20-alpine AS build
 
+ARG VITE_API_URL
+ARG VITE_DEMO_USERNAME
+ARG VITE_DEMO_PASSWORD
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
