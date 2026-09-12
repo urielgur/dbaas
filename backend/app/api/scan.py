@@ -18,10 +18,15 @@ router = APIRouter(prefix="/scan", tags=["scan"])
 async def trigger_scan(
     background_tasks: BackgroundTasks,
     current_user: Annotated[UserRecord, Depends(get_current_user)],
-    scheduler: Annotated[ScanScheduler, Depends(get_scheduler)],
+    scheduler: Annotated[ScanScheduler | None, Depends(get_scheduler)],
 ) -> dict[str, str]:
     if not current_user.is_admin:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    if scheduler is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail="Scanning is disabled (SCAN_INTERVAL_SECONDS<=0) — this environment uses static sample data.",
+        )
     background_tasks.add_task(scheduler.trigger_now)
     return {"status": "accepted", "message": "Scan triggered"}
 

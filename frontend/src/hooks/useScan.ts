@@ -38,8 +38,9 @@ export function useScan() {
       queryClient.invalidateQueries({ queryKey: ["scan-status"] });
       toast.info("Scan started…");
     },
-    onError: () => {
-      toast.error("Failed to start scan. Is the backend running?");
+    onError: (error: unknown) => {
+      const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(detail ?? "Failed to start scan. Is the backend running?");
     },
   });
 
