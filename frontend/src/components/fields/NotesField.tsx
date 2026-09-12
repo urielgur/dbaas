@@ -4,6 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { updateNotes } from "../../api/databases";
 import type { FieldRendererProps } from "./types";
 
+// Demo builds set the backend to reject persisted note edits (shared public
+// data, editable by anyone with the demo login). The save request still
+// succeeds so the UI behaves normally, but skipping the query invalidation
+// keeps the edit visible for the rest of this session instead of being
+// immediately overwritten by a refetch of the untouched server data.
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
 export function NotesField({ record }: FieldRendererProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -36,7 +43,9 @@ export function NotesField({ record }: FieldRendererProps) {
       await updateNotes(record.id, draft);
       setSavedNotes(draft);
       setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["databases"] });
+      if (!DEMO_MODE) {
+        queryClient.invalidateQueries({ queryKey: ["databases"] });
+      }
     } catch {
       setError("Save failed");
     } finally {

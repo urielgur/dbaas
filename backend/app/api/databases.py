@@ -136,6 +136,11 @@ async def update_notes(
     _: Annotated[UserRecord, Depends(get_current_user)],
     storage: Annotated[StorageBackend, Depends(get_storage)],
 ) -> dict:
+    if settings.demo_read_only:
+        existing = await storage.get_by_id(db_id)
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Database not found")
+        return {"ok": True, "demo_read_only": True}
     found = await storage.update_notes(db_id, body.notes)
     if not found:
         raise HTTPException(status_code=404, detail="Database not found")

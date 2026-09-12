@@ -129,6 +129,7 @@ class Settings(BaseSettings):
     openshift: OpenShiftSettings = OpenShiftSettings()
     scan_interval_seconds: int = 300
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    demo_read_only: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod
