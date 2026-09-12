@@ -31,10 +31,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const login = useCallback(async (username: string, password: string) => {
+    const { access_token } = await loginRequest(username, password);
+    localStorage.setItem(TOKEN_KEY, access_token);
+    setToken(access_token);
+    const me = await getMeRequest();
+    setUser(me);
+  }, []);
+
   // Validate stored token on mount
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
     if (!stored) {
+      // Demo builds can bake in a fixed account so visitors skip the login
+      // screen entirely. Unset in a normal deployment, so this is a no-op there.
+      const demoUsername = import.meta.env.VITE_DEMO_USERNAME;
+      const demoPassword = import.meta.env.VITE_DEMO_PASSWORD;
+      if (demoUsername && demoPassword) {
+        login(demoUsername, demoPassword)
+          .catch(() => {
+            // Demo credentials rejected — fall back to the normal login page
+          })
+          .finally(() => setIsLoading(false));
+        return;
+      }
       setIsLoading(false);
       return;
     }
@@ -52,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         setIsLoading(false);
       });
-  }, []);
+  }, [login]);
 
   // Listen for 401s from the Axios interceptor
   useEffect(() => {
@@ -60,14 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener("auth:logout", handler);
     return () => window.removeEventListener("auth:logout", handler);
   }, [logout]);
-
-  const login = useCallback(async (username: string, password: string) => {
-    const { access_token } = await loginRequest(username, password);
-    localStorage.setItem(TOKEN_KEY, access_token);
-    setToken(access_token);
-    const me = await getMeRequest();
-    setUser(me);
-  }, []);
 
   return (
     <AuthContext.Provider value={{ token, user, isLoading, login, logout }}>

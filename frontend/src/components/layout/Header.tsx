@@ -8,6 +8,9 @@ export function Header() {
     <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-center gap-3">
       <DatabaseIcon className="w-6 h-6 text-brand-600" aria-hidden="true" />
       <h1 className="text-xl font-semibold text-gray-900">DBaaS Manager</h1>
+      <span className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white bg-red-600 rounded-full">
+        Demo
+      </span>
 
       {user && (
         <div className="ml-auto flex items-center gap-3">
