@@ -12,8 +12,6 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { EXAMPLE_DATABASES, EXAMPLE_DB_TYPES } from "../data/example-data";
 import type { DatabaseRecord } from "../types/database";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
-
 // A QueryClient pre-seeded with fake db-types so ParentChartsSection renders.
 function makeExampleQueryClient() {
   const qc = new QueryClient({
