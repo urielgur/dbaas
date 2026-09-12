@@ -5,6 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>dbaas-mgt</title>
+    <!-- %VITE_ANALYTICS_URL% is only set in demo builds; a normal build/dev
+         server leaves this blank and the browser just skips an empty src. -->
+    <script data-goatcounter="%VITE_ANALYTICS_URL%/count" async src="%VITE_ANALYTICS_URL%/count.js"></script>
   </head>
   <body>
     <div id="root"></div>
