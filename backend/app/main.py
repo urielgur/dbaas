@@ -53,14 +53,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     gitlab_collector = GitLabCollector(settings.gitlab, http_client)
     argocd_collector = ArgoCDCollector(settings.argocd.instances, http_client)
     orchestrator = ScanOrchestrator(gitlab_collector, argocd_collector, storage, settings.argocd.app_name_prefix)
-    scheduler = ScanScheduler(orchestrator, settings.scan_interval_seconds)
+
+    scheduler: ScanScheduler | None = None
+    if settings.scan_interval_seconds > 0:
+        scheduler = ScanScheduler(orchestrator, settings.scan_interval_seconds)
+        await scheduler.start()
+    else:
+        logger.info("SCAN_INTERVAL_SECONDS <= 0, background scanning disabled")
 
     app.state.storage = storage
     app.state.http_client = http_client
     app.state.orchestrator = orchestrator
     app.state.scheduler = scheduler
-
-    await scheduler.start()
 
     # Bootstrap admin user if no users exist and a password is configured
     user_storage = UserJsonStorage(settings.auth.users_json_path)
@@ -77,7 +81,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
-    await scheduler.stop()
+    if scheduler is not None:
+        await scheduler.stop()
     await http_client.aclose()
     logger.info("DBaaS backend shut down")
 
